@@ -1,68 +1,105 @@
 <template>
-  <div class="p-6 min-h-screen bg-gray-100 flex flex-col items-center">
-    <h1 class="text-2xl font-bold mb-4">CellML Annotator Demo</h1>
+  <div class="container">
+    <div class="header">
+      <h1>CellML Annotation GUI</h1>
+      <p>Add annotations to CellML and SEDML models</p>
+    </div>
 
-    <input
-      type="file"
-      accept=".cellml,.xml"
-      @change="handleFileUpload"
-      class="mb-4"
-    />
+    <div class="content">
+      <div class="left-panel">
+        <FileLoader @file-loaded="handleFileLoaded" />
+        <ModelInfo v-if="model" :model="model" :components="components" />
+        <ComponentList 
+          v-if="components.length > 0"
+          :components="components" 
+          :selected-component="selectedComponent"
+          @component-selected="handleComponentSelected"
+        />
+      </div>
 
-    <pre class="bg-white p-4 rounded shadow w-full max-w-lg">
-      {{ modelInfo || "Upload a CellML file to see details here" }}
-    </pre>
+      <div class="right-panel">
+        <div v-if="selectedComponent">
+          <h3>Add annotations to the component: {{ selectedComponent.name }}</h3>
+          <AnnotationForm 
+            @annotation-added="handleAnnotationAdded"
+            @export-model="handleExportModel"
+          />
+          <AnnotationList 
+            v-if="currentAnnotations.length > 0"
+            :annotations="currentAnnotations"
+          />
+          <div style="margin-top: 20px;">
+            <button @click="handleExportModel" class="btn btn-success">
+              Export CellML File
+            </button>
+          </div>
+        </div>
+        <div v-else class="empty-state">
+          <h3>Please upload CellML file and select a component.</h3>
+          <p>Then can start annotation.</p>
+        </div>
+      </div>
+    </div>
+    
+    <MessageDisplay :message="message" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
-import libcellmlModule from "libcellml.js"; 
-import libCellMLWasm from 'libcellml.js/libcellml.wasm'
+import FileLoader from './components/FileLoader.vue'
+import ModelInfo from './components/ModelInfo.vue'
+import ComponentList from './components/ComponentList.vue'
+import AnnotationForm from './components/AnnotationForm.vue'
+import AnnotationList from './components/AnnotationList.vue'
+import MessageDisplay from './components/MessageDisplay.vue'
+import { useCellML } from './composables/useCellML'
+import { useAnnotations } from './composables/useAnnotations'
 
-const libcellml = ref(null);
-const modelInfo = ref("");
+const { 
+  model, 
+  components, 
+  parseModel, 
+  exportModel, 
+  initLibCellML 
+} = useCellML()
 
-// // Load libcellml WASM
-onMounted(async () => {
-  libcellml.value = await libcellmlModule(
-  {locateFile(path, prefix) {
-    if(path.endsWith('.wasm')) {
-      return libCellMLWasm
-    }
-    return prefix + path
-  }});
-  console.log("✅ libcellml loaded:", libcellml.value);
-});
+const {
+  selectedComponent,
+  currentAnnotations,
+  selectComponent,
+  addAnnotation
+} = useAnnotations(components)
 
-const handleFileUpload = async (event) => {
-  console.log("Uploaded")
-  const file = event.target.files[0];
-  console.log(event.target.files[0])
-  console.log(!libcellml.value)
-  if (!file || !libcellml.value) return;
+const message = ref({ text: '', type: '' })
 
-  const text = await file.text();
+onMounted(() => {
+  initLibCellML()
+})
 
-  // Create libcellml parser
-  const parser = new libcellml.value.Parser(false);
-  const model = parser.parseModel(text);
-
-  if (!model) {
-    modelInfo.value = "❌ Failed to parse CellML file";
-    return;
-  }
-
-  // Get model info
-  const name = model.name();
-  const components = model.componentCount();
-
-  modelInfo.value = `✅ Model loaded!\nName: ${name}\nComponents: ${components}`;
-};
-</script>
-
-<style>
-body {
-  font-family: sans-serif;
+const handleFileLoaded = (content) => {
+  parseModel(content)
+  showMessage('Model load', 'success')
 }
-</style>
+
+const handleComponentSelected = (component) => {
+  selectComponent(component)
+}
+
+const handleAnnotationAdded = (annotation) => {
+  addAnnotation(annotation)
+  showMessage('Annotation added success', 'success')
+}
+
+const handleExportModel = () => {
+  exportModel()
+  showMessage('Annotation added success', 'success')
+}
+
+const showMessage = (text, type) => {
+  message.value = { text, type }
+  setTimeout(() => {
+    message.value = { text: '', type: '' }
+  }, 3000)
+}
+</script>
