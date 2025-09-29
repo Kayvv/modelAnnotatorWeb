@@ -1,48 +1,48 @@
 import { ref, computed } from 'vue'
 
-export function useAnnotations(components) {
-    const selectedComponent = ref(null)
+export function useAnnotations(variables) {
+    const selectedVariable = ref(null)
     const annotations = ref({})
 
     const currentAnnotations = computed(() => {
-        if (!selectedComponent.value) return []
-        return annotations.value[selectedComponent.value.name] || []
+        if (!selectedVariable.value) return []
+        return annotations.value[selectedVariable.value.name] || []
     })
 
-    const selectComponent = (component) => {
-        selectedComponent.value = component
-        loadCurrentAnnotations(component)
+    const selectVariable = (variable) => {
+        selectedVariable.value = variable
+        loadCurrentAnnotations(variable)
     }
 
-    const loadCurrentAnnotations = (component) => {
+    const loadCurrentAnnotations = (variable) => {
         // Add current annotations
-        if (!annotations.value[component.name]) {
-            annotations.value[component.name] = []
+        if (!annotations.value[variable.name]) {
+            annotations.value[variable.name] = []
         }
     }
 
     const addAnnotation = (annotation) => {
-        if (!selectedComponent.value) return
+        if (!selectedVariable.value) return
 
-        const componentName = selectedComponent.value.name
-        if (!annotations.value[componentName]) {
-            annotations.value[componentName] = []
+        const variableName = selectedVariable.value.name
+        if (!annotations.value[variableName]) {
+            annotations.value[variableName] = []
         }
 
-        const existingIndex = annotations.value[componentName]
+        const existingIndex = annotations.value[variableName]
             .findIndex(a => a.key === annotation.key)
 
         if (existingIndex >= 0) {
-            annotations.value[componentName][existingIndex] = annotation
+            annotations.value[variableName][existingIndex] = annotation
         } else {
-            annotations.value[componentName].push(annotation)
+            annotations.value[variableName].push(annotation)
         }
     }
 
     return {
-        selectedComponent,
+        selectedVariable,
         currentAnnotations,
-        selectComponent,
+        selectVariable,
         addAnnotation
     }
 }

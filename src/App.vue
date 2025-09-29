@@ -9,17 +9,18 @@
       <div class="left-panel">
         <FileLoader @file-loaded="handleFileLoaded" />
         <ModelInfo v-if="model" :model="model" :components="components" />
-        <ComponentList 
-          v-if="components.length > 0"
-          :components="components" 
-          :selected-component="selectedComponent"
-          @component-selected="handleComponentSelected"
+
+        <VariableGroupsList 
+          v-if="Object.keys(groupedVariables).length > 0"
+          :grouped-variables="groupedVariables" 
+          :selected-variable="selectedVariable"
+          @variable-selected="handleVariableSelected"
         />
       </div>
 
       <div class="right-panel">
-        <div v-if="selectedComponent">
-          <h3>Add annotations to the component: {{ selectedComponent.name }}</h3>
+        <div v-if="selectedVariable">
+          <h3>Add annotations to the variable: {{ selectedVariable.name }}</h3>
           <AnnotationForm 
             @annotation-added="handleAnnotationAdded"
             @export-model="handleExportModel"
@@ -49,7 +50,7 @@
 import { ref, onMounted } from "vue";
 import FileLoader from './components/FileLoader.vue'
 import ModelInfo from './components/ModelInfo.vue'
-import ComponentList from './components/ComponentList.vue'
+import VariableGroupsList from './components/VariableGroupsList.vue'
 import AnnotationForm from './components/AnnotationForm.vue'
 import AnnotationList from './components/AnnotationList.vue'
 import MessageDisplay from './components/MessageDisplay.vue'
@@ -58,7 +59,8 @@ import { useAnnotations } from './composables/useAnnotations'
 
 const { 
   model, 
-  components, 
+  components,
+  groupedVariables, 
   parseModel, 
   exportModel, 
   initLibCellML 
@@ -66,8 +68,10 @@ const {
 
 const {
   selectedComponent,
+  selectedVariable,
   currentAnnotations,
   selectComponent,
+  selectVariable,
   addAnnotation
 } = useAnnotations(components)
 
@@ -84,6 +88,10 @@ const handleFileLoaded = (content) => {
 
 const handleComponentSelected = (component) => {
   selectComponent(component)
+}
+
+const handleVariableSelected = (variable) => {
+  selectVariable(variable)
 }
 
 const handleAnnotationAdded = (annotation) => {
