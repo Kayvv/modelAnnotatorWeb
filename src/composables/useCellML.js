@@ -62,7 +62,13 @@ export function useCellML() {
                                 })
 
                                 if (libcellml.value.Units.compatible(referenceUnits, variableUnitsObject)) {
-                                    groups[categoryName].push(variable)
+                                    const enrichedVariable = {
+                                        ...variable,
+                                        category: categoryName,
+                                        matchedUnit: unitConfig.name,
+                                        domain: unitConfig.domain || 'Unknown'
+                                    }
+                                    groups[categoryName].push(enrichedVariable)
                                     assigned = true
                                 }
 
@@ -78,7 +84,10 @@ export function useCellML() {
                 }
 
                 if (!assigned) {
-                    groups['Uncategorized'].push(variable)
+                    groups['Uncategorized'].push({
+                        ...variable,
+                        domain: 'Unknown'
+                    })
                 }
 
                 if (variableUnitsObject?.delete) {
@@ -90,7 +99,10 @@ export function useCellML() {
                 console.warn(`Error processing variable ${variable.name}:`, error)
 
                 if (!assigned) {
-                    groups['Uncategorized'].push(variable)
+                    groups['Uncategorized'].push({
+                        ...variable,
+                        domain: 'Unknown'
+                    })
                 }
 
                 if (variableUnitsObject?.delete) {

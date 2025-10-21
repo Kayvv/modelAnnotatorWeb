@@ -1,4 +1,3 @@
-// config/unitsCategories.js
 export const unitsCategories = {
 
     "Thermodynamic properties": {

@@ -20,24 +20,40 @@
 
       <div class="right-panel">
         <div v-if="selectedVariable">
-          <h3>Add annotations to the variable: {{ selectedVariable.name }}</h3>
-          <AnnotationForm 
+          <h3>Annotating: {{ selectedVariable.name }}</h3>
+          <p>Category: <strong>{{ selectedVariable.category || 'Uncategorized' }}</strong></p>
+          <p>Units: <strong>{{ selectedVariable.units }}</strong></p>
+          
+          <div class="rdf-stats">
+            <p>Total RDF triples: <strong>{{ rdfTripleCount }}</strong></p>
+          </div>
+          
+          <DynamicAnnotationForm
+            :selected-variable="selectedVariable"
+            :variable-category="selectedVariable.category || 'Uncategorized'"
             @annotation-added="handleAnnotationAdded"
-            @export-model="handleExportModel"
           />
+          
           <AnnotationList 
             v-if="currentAnnotations.length > 0"
             :annotations="currentAnnotations"
           />
-          <div style="margin-top: 20px;">
-            <button @click="handleExportModel" class="btn btn-success">
-              Export CellML File
+          
+          <div class="export-buttons">
+            <button @click="handleExportRDF" class="btn btn-primary">
+              Export RDF (Turtle)
+            </button>
+            <button @click="handleExportCombined" class="btn btn-success">
+              Export CellML + RDF
+            </button>
+            <button @click="handleClearAnnotations" class="btn btn-danger">
+              Clear All Annotations
             </button>
           </div>
         </div>
         <div v-else class="empty-state">
-          <h3>Please upload CellML file and select a component.</h3>
-          <p>Then can start annotation.</p>
+          <h3>Please upload CellML file and select a variable.</h3>
+          <p>Then start annotation.</p>
         </div>
       </div>
     </div>
@@ -47,18 +63,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import FileLoader from './components/FileLoader.vue'
 import ModelInfo from './components/ModelInfo.vue'
 import VariableGroupsList from './components/VariableGroupsList.vue'
-import AnnotationForm from './components/AnnotationForm.vue'
+import DynamicAnnotationForm from './components/DynamicAnnotationForm.vue'
 import AnnotationList from './components/AnnotationList.vue'
 import MessageDisplay from './components/MessageDisplay.vue'
 import { useCellML } from './composables/useCellML'
 import { useAnnotations } from './composables/useAnnotations'
 
 const { 
-  model, 
+  model,
+  modelName,
   components,
   groupedVariables, 
   parseModel, 
@@ -67,15 +84,20 @@ const {
 } = useCellML()
 
 const {
-  selectedComponent,
   selectedVariable,
   currentAnnotations,
-  selectComponent,
   selectVariable,
-  addAnnotation
+  addAnnotation,
+  exportRDF,
+  clearAllAnnotations,
+  getAnnotationCount
 } = useAnnotations(components)
 
 const message = ref({ text: '', type: '' })
+
+const rdfTripleCount = computed(() => {
+  return getAnnotationCount()
+})
 
 onMounted(() => {
   initLibCellML()
@@ -83,11 +105,7 @@ onMounted(() => {
 
 const handleFileLoaded = (content) => {
   parseModel(content)
-  showMessage('Model load', 'success')
-}
-
-const handleComponentSelected = (component) => {
-  selectComponent(component)
+  showMessage('Model loaded successfully', 'success')
 }
 
 const handleVariableSelected = (variable) => {
@@ -96,12 +114,48 @@ const handleVariableSelected = (variable) => {
 
 const handleAnnotationAdded = (annotation) => {
   addAnnotation(annotation)
-  showMessage('Annotation added success', 'success')
+  showMessage('Annotation added successfully', 'success')
 }
 
-const handleExportModel = () => {
-  exportModel()
-  showMessage('Annotation added success', 'success')
+const handleExportRDF = async () => {
+  try {
+    const turtle = await exportRDF()
+    
+    const blob = new Blob([turtle], { type: 'text/turtle' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${components.value || 'model'}_annotations.ttl`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    
+    showMessage('RDF exported successfully', 'success')
+  } catch (error) {
+    console.error('Error exporting RDF:', error)
+    showMessage('Error exporting RDF', 'error')
+  }
+}
+
+const handleExportCombined = async () => {
+  try {
+    exportModel()
+    
+    await handleExportRDF()
+    
+    showMessage('CellML and RDF exported successfully', 'success')
+  } catch (error) {
+    console.error('Error exporting:', error)
+    showMessage('Error exporting files', 'error')
+  }
+}
+
+const handleClearAnnotations = () => {
+  if (confirm('Are you sure you want to clear all annotations? This cannot be undone.')) {
+    clearAllAnnotations()
+    showMessage('All annotations cleared', 'success')
+  }
 }
 
 const showMessage = (text, type) => {
