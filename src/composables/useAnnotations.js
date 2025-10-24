@@ -1,15 +1,20 @@
 import { ref, computed } from 'vue'
 import { useRDF } from './useRDF'
 
-export function useAnnotations(modelName) {
+export function useAnnotations() {
     const selectedVariable = ref(null)
     const annotations = ref({})
     const { addAnnotation: addRDFAnnotation, exportToTurtle, clearAnnotations, getAnnotationCount } = useRDF()
 
     const currentAnnotations = computed(() => {
         if (!selectedVariable.value) return []
-        return annotations.value[selectedVariable.value.name] || []
+        const varKey = getVariableKey(selectedVariable.value)
+        return annotations.value[varKey] || []
     })
+
+    const getVariableKey = (variable) => {
+        return `${variable.component.name}.${variable.name}`
+    }
 
     const selectVariable = (variable) => {
         selectedVariable.value = variable
@@ -17,21 +22,27 @@ export function useAnnotations(modelName) {
     }
 
     const loadCurrentAnnotations = (variable) => {
-        if (!annotations.value[variable.name]) {
-            annotations.value[variable.name] = []
+        const varKey = getVariableKey(variable)
+        if (!annotations.value[varKey]) {
+            annotations.value[varKey] = []
         }
     }
 
     const addAnnotation = (annotation) => {
-        if (!selectedVariable.value) return
+        if (!selectedVariable.value) {
+            console.error('No variable selected')
+            return
+        }
 
-        const variableName = selectedVariable.value.name
+        console.log('Adding annotation:', annotation)
+
+        const varKey = getVariableKey(selectedVariable.value)
+
         try {
             const enrichedAnnotation = {
                 ...annotation,
                 variable: {
-                    ...selectedVariable.value,
-                    modelName: modelName.value
+                    ...selectedVariable.value
                 }
             }
 
@@ -42,24 +53,30 @@ export function useAnnotations(modelName) {
             console.error('Error adding RDF annotation:', error)
         }
 
-        if (!annotations.value[variableName]) {
-            annotations.value[variableName] = []
+        if (!annotations.value[varKey]) {
+            annotations.value[varKey] = []
         }
 
         const annotationSummary = createAnnotationSummary(annotation)
+        console.log('Created annotation summary:', annotationSummary)
 
-        const existingIndex = annotations.value[variableName]
+        const existingIndex = annotations.value[varKey]
             .findIndex(a => a.type === annotation.type)
 
         if (existingIndex >= 0) {
-            annotations.value[variableName][existingIndex] = annotationSummary
+            annotations.value[varKey][existingIndex] = annotationSummary
         } else {
-            annotations.value[variableName].push(annotationSummary)
+            annotations.value[varKey].push(annotationSummary)
         }
+
+        console.log('Current annotations for variable:', annotations.value[varKey])
     }
 
     const createAnnotationSummary = (annotation) => {
         const { type, domain, data } = annotation
+
+        console.log('Creating summary for:', { type, domain, data })
+
         let summary = {
             type: type,
             domain: domain,
@@ -77,9 +94,12 @@ export function useAnnotations(modelName) {
                 summary.details = [
                     { label: 'Source Species', value: data.source?.species || 'N/A' },
                     { label: 'Source Compartment', value: data.source?.compartment || 'N/A' },
+                    { label: 'Source Multiplier', value: data.source?.multiplier || 1 },
                     { label: 'Sink Species', value: data.sink?.species || 'N/A' },
                     { label: 'Sink Compartment', value: data.sink?.compartment || 'N/A' },
+                    { label: 'Sink Multiplier', value: data.sink?.multiplier || 1 },
                     { label: 'Mediator', value: data.mediator?.protein || 'None' },
+                    { label: 'Mediator Compartment', value: data.mediator?.compartment || 'N/A' },
                     { label: 'Bioprocess', value: data.bioprocess || 'N/A' },
                     { label: 'Physical Property', value: data.physicalProperty || 'N/A' }
                 ]
@@ -103,9 +123,12 @@ export function useAnnotations(modelName) {
                 summary.details = [
                     { label: 'Source Fluid', value: data.source?.fluid || 'N/A' },
                     { label: 'Source Compartment', value: data.source?.compartment || 'N/A' },
+                    { label: 'Source Multiplier', value: data.source?.multiplier || 1 },
                     { label: 'Sink Fluid', value: data.sink?.fluid || 'N/A' },
                     { label: 'Sink Compartment', value: data.sink?.compartment || 'N/A' },
+                    { label: 'Sink Multiplier', value: data.sink?.multiplier || 1 },
                     { label: 'Mediator', value: data.mediator?.protein || 'None' },
+                    { label: 'Mediator Compartment', value: data.mediator?.compartment || 'N/A' },
                     { label: 'Physical Property', value: data.physicalProperty || 'N/A' }
                 ]
             } else if (type === 'Efforts') {
@@ -117,6 +140,7 @@ export function useAnnotations(modelName) {
             }
         }
 
+        console.log('Summary created:', summary)
         return summary
     }
 

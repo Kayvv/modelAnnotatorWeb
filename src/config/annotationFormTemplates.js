@@ -10,7 +10,7 @@ export const biochemistryTemplates = {
                 label: "Species/Molecule",
                 type: "ontology-search",
                 required: true,
-                ontology: "ChEBI",
+                ontology: "CHEBI",
                 placeholder: "e.g., CHEBI:17234 (glucose)",
                 helpText: "Search ChEBI for chemical entities",
                 searchUrl: "https://www.ebi.ac.uk/chebi/searchId.do?chebiId=",
@@ -26,14 +26,6 @@ export const biochemistryTemplates = {
                 helpText: "Search GO for cellular components",
                 searchUrl: "https://www.ebi.ac.uk/QuickGO/term/",
                 validatePattern: /^GO:\d{7}$/,
-                commonTerms: [
-                    { id: "GO:0005886", label: "plasma membrane" },
-                    { id: "GO:0005829", label: "cytosol" },
-                    { id: "GO:0005739", label: "mitochondrion" },
-                    { id: "GO:0005783", label: "endoplasmic reticulum" },
-                    { id: "GO:0005634", label: "nucleus" },
-                    { id: "GO:0005615", label: "extracellular space" }
-                ]
             },
             {
                 id: "physicalProperty",
@@ -45,11 +37,6 @@ export const biochemistryTemplates = {
                 helpText: "Search OPB for physical properties",
                 searchUrl: "https://bioportal.bioontology.org/ontologies/OPB?p=classes&conceptid=",
                 validatePattern: /^OPB:\d+$/,
-                commonTerms: [
-                    { id: "OPB:00425", label: "chemical concentration" },
-                    { id: "OPB:00340", label: "amount of substance" },
-                    { id: "OPB:00523", label: "charge density" }
-                ]
             }
         ]
     },
@@ -70,7 +57,7 @@ export const biochemistryTemplates = {
                         id: "species",
                         label: "Species",
                         type: "ontology-search",
-                        ontology: "ChEBI",
+                        ontology: "CHEBI",
                         placeholder: "e.g., CHEBI:17234",
                         validatePattern: /^CHEBI:\d+$/
                     },
@@ -102,7 +89,7 @@ export const biochemistryTemplates = {
                         id: "species",
                         label: "Species",
                         type: "ontology-search",
-                        ontology: "ChEBI",
+                        ontology: "CHEBI",
                         placeholder: "e.g., CHEBI:17234",
                         validatePattern: /^CHEBI:\d+$/
                     },
@@ -133,7 +120,7 @@ export const biochemistryTemplates = {
                         id: "protein",
                         label: "Protein",
                         type: "ontology-search",
-                        ontology: "PR/UniProt",
+                        ontology: "PR/UNIPROT",
                         placeholder: "e.g., PR:000007235 (GLUT2) or P14672",
                         helpText: "Search Protein Ontology or UniProt",
                         validatePattern: /^(PR:\d+|[A-Z0-9]{6,10})$/,
@@ -154,7 +141,7 @@ export const biochemistryTemplates = {
                 label: "Biological Process/Activity",
                 type: "ontology-search",
                 required: true,
-                ontology: "GO/SBO",
+                ontology: "GO_BP/SBO",
                 placeholder: "e.g., GO:0046323 (glucose import)",
                 helpText: "Use GO biological process or SBO terms",
                 validatePattern: /^(GO:\d{7}|SBO:\d{7})$/,
@@ -168,9 +155,6 @@ export const biochemistryTemplates = {
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00592 (chemical flux)",
                 validatePattern: /^OPB:\d+$/,
-                commonTerms: [
-                    { id: "OPB:00592", label: "chemical flux" }
-                ]
             }
         ]
     },
@@ -191,7 +175,7 @@ export const biochemistryTemplates = {
                         id: "species",
                         label: "Species",
                         type: "ontology-search",
-                        ontology: "ChEBI",
+                        ontology: "CHEBI",
                         placeholder: "e.g., CHEBI:29101 (Na+)",
                         validatePattern: /^CHEBI:\d+$/
                     },
@@ -215,7 +199,7 @@ export const biochemistryTemplates = {
                         id: "species",
                         label: "Species",
                         type: "ontology-search",
-                        ontology: "ChEBI",
+                        ontology: "CHEBI",
                         placeholder: "e.g., CHEBI:29101 (Na+)",
                         validatePattern: /^CHEBI:\d+$/
                     },
@@ -236,11 +220,7 @@ export const biochemistryTemplates = {
                 required: true,
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00506 (electrical potential difference)",
-                validatePattern: /^OPB:\d+$/,
-                commonTerms: [
-                    { id: "OPB:00506", label: "electrical potential difference" },
-                    { id: "OPB:00378", label: "chemical potential" }
-                ]
+                validatePattern: /^OPB:\d+$/
             }
         ]
     }
@@ -452,6 +432,95 @@ export const fluidDynamicsTemplates = {
             }
         ]
     }
+}
+
+// Helper function to deep clone template while preserving RegExp
+function deepCloneTemplate(obj) {
+    if (obj === null || typeof obj !== 'object') {
+        return obj
+    }
+
+    // Handle RegExp
+    if (obj instanceof RegExp) {
+        return new RegExp(obj.source, obj.flags)
+    }
+
+    // Handle Array
+    if (Array.isArray(obj)) {
+        return obj.map(item => deepCloneTemplate(item))
+    }
+
+    // Handle Object
+    const cloned = {}
+    for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            cloned[key] = deepCloneTemplate(obj[key])
+        }
+    }
+
+    return cloned
+}
+
+export function getTemplateForVariable(domain, annotationType, userOntologies) {
+    console.log('Getting template for:', { domain, annotationType })
+
+    if (!annotationType) {
+        return null
+    }
+
+    let templates
+    if (domain === 'Biochemistry') {
+        templates = biochemistryTemplates
+    } else if (domain === 'Fluid dynamics') {
+        templates = fluidDynamicsTemplates
+    } else {
+        console.warn('Unknown domain, using Biochemistry templates')
+        templates = biochemistryTemplates
+    }
+
+    const template = templates[annotationType]
+
+    if (!template) {
+        console.error(`No template found for annotationType: ${annotationType}`)
+        return null
+    }
+
+    // Use custom deep clone to preserve RegExp
+    const clonedTemplate = deepCloneTemplate(template)
+
+    // Inject user-selected common terms
+    if (userOntologies) {
+        injectCommonTerms(clonedTemplate.fields, userOntologies)
+    }
+
+    console.log('Selected template:', clonedTemplate.displayName)
+    return clonedTemplate
+}
+
+// Recursive function to inject common terms into fields
+function injectCommonTerms(fields, userOntologies) {
+    fields.forEach(field => {
+        if (field.type === 'composite' && field.subfields) {
+            injectCommonTerms(field.subfields, userOntologies)
+        } else if (field.type === 'ontology-search' && field.ontology) {
+            // Handle multiple ontologies (e.g., "PR/UNIPROT" or "GO_BP/SBO")
+            const ontologies = field.ontology.split('/')
+
+            let combinedTerms = []
+            ontologies.forEach(ontId => {
+                const cleanOntId = ontId.trim()
+                const ontology = userOntologies[cleanOntId] || userOntologies[cleanOntId.toUpperCase()]
+                if (ontology && ontology.commonTerms) {
+                    combinedTerms = combinedTerms.concat(ontology.commonTerms)
+                }
+            })
+
+            if (combinedTerms.length > 0) {
+                field.commonTerms = combinedTerms
+                console.log(`Injected ${combinedTerms.length} terms for ${field.ontology}`)
+            }
+        }
+    })
 }
 
 export function getTemplatesForDomain(domain) {

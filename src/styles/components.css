@@ -20,8 +20,8 @@
 }
 
 .components-list {
-    max-height: 350px;
-    overflow-y: auto;
+    /* max-height: 350px; */
+    /* overflow-y: auto; */
     border: 1px solid #ddd;
     border-radius: 8px;
 }
@@ -40,6 +40,10 @@
 .component-item.selected {
     background-color: #e3f2fd;
     border-left: 4px solid #2196f3;
+}
+
+.component-item:last-child {
+    border-bottom: none;
 }
 
 .annotation-form {
@@ -75,8 +79,8 @@
 }
 
 .annotations-list {
-    max-height: 200px;
-    overflow-y: auto;
+    /* max-height: 200px; */
+    /* overflow-y: auto; */
     border: 1px solid #ddd;
     border-radius: 8px;
     background: white;
@@ -95,4 +99,36 @@
 .annotation-key {
     font-weight: bold;
     color: #2196f3;
+}
+
+.components-list.compact {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.annotations-list.compact {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.components-list.compact::-webkit-scrollbar,
+.annotations-list.compact::-webkit-scrollbar {
+    width: 8px;
+}
+
+.components-list.compact::-webkit-scrollbar-track,
+.annotations-list.compact::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.components-list.compact::-webkit-scrollbar-thumb,
+.annotations-list.compact::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.components-list.compact::-webkit-scrollbar-thumb:hover,
+.annotations-list.compact::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }

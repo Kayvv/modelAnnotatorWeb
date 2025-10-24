@@ -1,7 +1,7 @@
 <template>
   <div>
     <h4>Variable Groups List</h4>
-    <div class="variables-container">
+    <div class="variables-container compact">
       <div 
         v-for="(variables, groupName) in groupedVariables" 
         :key="groupName"

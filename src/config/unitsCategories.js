@@ -1,200 +1,255 @@
 export const unitsCategories = {
+    "Temporal": {
+        description: "Time-related properties",
+        units: [
+            {
+                name: "ms",
+                definition: [["second", "milli"]],
+                domain: "Biochemistry",
+                annotationType: null
+            }
+        ]
+    },
 
-    "Thermodynamic properties": {
+    "Thermodynamic": {
         description: "Temperature and energy properties",
         units: [
             {
                 name: "K",
                 definition: [["kelvin"]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: null
             },
             {
                 name: "J",
                 definition: [["joule"]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: null
             },
             {
                 name: "mW",
                 definition: [["watt", "milli"]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: null
             },
             {
                 name: "S",
                 definition: [["joule"], ["kelvin", null, -1]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: null
             },
             {
                 name: "S_per_s",
                 definition: [["S"], ["second", null, -1]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: null
             }
         ]
     },
 
     "Quantities": {
-        description: "Length, area, volume, and angle properties",
+        description: "Amounts and concentrations",
         units: [
-            {
-                name: "um",
-                definition: [["metre", "micro"]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "m2",
-                definition: [["metre", null, 2]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "m3",
-                definition: [["metre", null, 3]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "rad",
-                definition: [["radian"]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "kg",
-                definition: [["kilogram"]],
-                domain: "Fluid dynamics"
-            },
+            // Biochemistry Quantities
             {
                 name: "fmol",
                 definition: [["mole", "femto"]],
-                domain: "Biochemistry"
-            },
-            {
-                name: "kg_per_m2",
-                definition: [["kilogram"], ["metre", null, -2]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "kg_per_m3",
-                definition: [["kilogram"], ["metre", null, -3]],
-                domain: "Fluid dynamics"
+                domain: "Biochemistry",
+                annotationType: "Quantities"
             },
             {
                 name: "mM",
                 definition: [["mole", "milli"], ["litre", null, -1]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Quantities"
             },
             {
                 name: "mol_per_m2",
                 definition: [["mole"], ["metre", null, -2]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Quantities"
             },
             {
                 name: "C_per_m2",
                 definition: [["coulomb"], ["metre", null, -2]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Quantities"
             },
             {
                 name: "C_per_m3",
                 definition: [["coulomb"], ["metre", null, -3]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Quantities"
             },
             {
                 name: "fC",
                 definition: [["coulomb", "femto"]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Quantities"
+            },
+            // Fluid dynamics Quantities
+            {
+                name: "m3",
+                definition: [["metre", null, 3]],
+                domain: "Fluid dynamics",
+                annotationType: "Quantities"
+            },
+            // No annotation type
+            {
+                name: "um",
+                definition: [["metre", "micro"]],
+                domain: "Fluid dynamics",
+                annotationType: null
+            },
+            {
+                name: "m2",
+                definition: [["metre", null, 2]],
+                domain: "Fluid dynamics",
+                annotationType: null
+            },
+            {
+                name: "rad",
+                definition: [["radian"]],
+                domain: "Fluid dynamics",
+                annotationType: null
+            },
+            {
+                name: "kg",
+                definition: [["kilogram"]],
+                domain: "Fluid dynamics",
+                annotationType: null
+            },
+            {
+                name: "kg_per_m2",
+                definition: [["kilogram"], ["metre", null, -2]],
+                domain: "Fluid dynamics",
+                annotationType: null
+            },
+            {
+                name: "kg_per_m3",
+                definition: [["kilogram"], ["metre", null, -3]],
+                domain: "Fluid dynamics",
+                annotationType: null
             }
         ]
     },
 
     "Flow rates": {
-        description: "Rate and velocity properties",
+        description: "Fluxes and flows",
         units: [
-            {
-                name: "m_per_s",
-                definition: [["metre"], ["second", null, -1]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "m2_per_s",
-                definition: [["metre", null, 2], ["second", null, -1]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "m3_per_s",
-                definition: [["metre", null, 3], ["second", null, -1]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "rad_per_s",
-                definition: [["radian"], ["second", null, -1]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "kg_per_s",
-                definition: [["kilogram"], ["second", null, -1]],
-                domain: "Fluid dynamics"
-            },
+            // Biochemistry Flow rates
             {
                 name: "fmol_per_s",
                 definition: [["mole", "femto"], ["second", null, -1]],
-                domain: "Biochemistry"
-            },
-            {
-                name: "fA",
-                definition: [["ampere", "femto"]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Flow rates"
             },
             {
                 name: "mM_per_s",
                 definition: [["mole", "milli"], ["litre", null, -1], ["second", null, -1]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Flow rates"
             },
             {
                 name: "mol_per_m2_s",
                 definition: [["mole"], ["metre", null, -2], ["second", null, -1]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Flow rates"
             },
             {
                 name: "C_per_m2_s",
                 definition: [["coulomb"], ["metre", null, -2], ["second", null, -1]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Flow rates"
             },
             {
                 name: "C_per_m3_s",
                 definition: [["coulomb"], ["metre", null, -3], ["second", null, -1]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Flow rates"
+            },
+            {
+                name: "fA",
+                definition: [["ampere", "femto"]],
+                domain: "Biochemistry",
+                annotationType: "Flow rates"
+            },
+            // Fluid dynamics Flow rates
+            {
+                name: "m3_per_s",
+                definition: [["metre", null, 3], ["second", null, -1]],
+                domain: "Fluid dynamics",
+                annotationType: "Flow rates"
+            },
+            // No annotation type
+            {
+                name: "m_per_s",
+                definition: [["metre"], ["second", null, -1]],
+                domain: "Fluid dynamics",
+                annotationType: null
+            },
+            {
+                name: "m2_per_s",
+                definition: [["metre", null, 2], ["second", null, -1]],
+                domain: "Fluid dynamics",
+                annotationType: null
+            },
+            {
+                name: "rad_per_s",
+                definition: [["radian"], ["second", null, -1]],
+                domain: "Fluid dynamics",
+                annotationType: null
+            },
+            {
+                name: "kg_per_s",
+                definition: [["kilogram"], ["second", null, -1]],
+                domain: "Fluid dynamics",
+                annotationType: null
             }
         ]
     },
 
     "Efforts": {
-        description: "Density flow rate properties",
+        description: "Potentials and driving forces",
         units: [
+            // Biochemistry Efforts
             {
-                name: "N",
-                definition: [["newton"]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "J_per_m2",
-                definition: [["joule"], ["metre", null, -2]],
-                domain: "Fluid dynamics"
-            },
-            {
-                name: "Pa",
-                definition: [["pascal"]],
-                domain: "Fluid dynamics"
+                name: "mV",
+                definition: [["volt", "milli"]],
+                domain: "Biochemistry",
+                annotationType: "Efforts"
             },
             {
                 name: "J_per_mol",
                 definition: [["joule"], ["mole", null, -1]],
-                domain: "Biochemistry"
+                domain: "Biochemistry",
+                annotationType: "Efforts"
+            },
+            // Fluid dynamics Efforts
+            {
+                name: "Pa",
+                definition: [["pascal"]],
+                domain: "Fluid dynamics",
+                annotationType: "Efforts"
+            },
+            // No annotation type
+            {
+                name: "N",
+                definition: [["newton"]],
+                domain: "Fluid dynamics",
+                annotationType: null
             },
             {
-                name: "mV",
-                definition: [["volt", "milli"]],
-                domain: "Biochemistry"
+                name: "J_per_m2",
+                definition: [["joule"], ["metre", null, -2]],
+                domain: "Fluid dynamics",
+                annotationType: null
             },
             {
                 name: "J_per_kg",
                 definition: [["joule"], ["kilogram", null, -1]],
-                domain: "Fluid dynamics"
+                domain: "Fluid dynamics",
+                annotationType: null
             }
         ]
     }

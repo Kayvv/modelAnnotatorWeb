@@ -66,7 +66,8 @@ export function useCellML() {
                                         ...variable,
                                         category: categoryName,
                                         matchedUnit: unitConfig.name,
-                                        domain: unitConfig.domain || 'Unknown'
+                                        domain: unitConfig.domain || 'Unknown',
+                                        annotationType: unitConfig.annotationType || null
                                     }
                                     groups[categoryName].push(enrichedVariable)
                                     assigned = true

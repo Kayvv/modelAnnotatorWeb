@@ -2,8 +2,16 @@
   <div class="container">
     <div class="header">
       <h1>CellML Annotation GUI</h1>
-      <p>Add annotations to CellML and SEDML models</p>
+      <p>Add semantic annotations to CellML models</p>
     </div>
+
+    <!-- Ontology Selector Modal -->
+    <OntologySelector
+      v-if="showOntologySelector"
+      :model-stats="modelStats"
+      @ontologies-selected="handleOntologiesSelected"
+      @close="handleOntologySelectorClose"
+    />
 
     <div class="content">
       <div class="left-panel">
@@ -19,10 +27,29 @@
       </div>
 
       <div class="right-panel">
-        <div v-if="selectedVariable">
+        <div v-if="!userOntologies" class="waiting-state">
+          <h3>Please select ontologies to begin annotation</h3>
+          <p>Upload a CellML file and select the ontologies you'll use.</p>
+          <button 
+            v-if="model" 
+            @click="showOntologySelector = true" 
+            class="btn btn-primary"
+          >
+            Select Ontologies
+          </button>
+        </div>
+        
+        <div v-else-if="selectedVariable">
           <h3>Annotating: {{ selectedVariable.name }}</h3>
           <p>Category: <strong>{{ selectedVariable.category || 'Uncategorized' }}</strong></p>
           <p>Units: <strong>{{ selectedVariable.units }}</strong></p>
+          
+          <!-- Display selected ontologies -->
+          <div class="selected-ontologies-info">
+            <button @click="showOntologySelector = true" class="btn-change-ontologies">
+              📚 Change Ontologies ({{ Object.keys(userOntologies).length }} selected)
+            </button>
+          </div>
           
           <div class="rdf-stats">
             <p>Total RDF triples: <strong>{{ rdfTripleCount }}</strong></p>
@@ -31,6 +58,7 @@
           <DynamicAnnotationForm
             :selected-variable="selectedVariable"
             :variable-category="selectedVariable.category || 'Uncategorized'"
+            :user-ontologies="userOntologies"
             @annotation-added="handleAnnotationAdded"
           />
           
@@ -51,9 +79,9 @@
             </button>
           </div>
         </div>
-        <div v-else class="empty-state">
-          <h3>Please upload CellML file and select a variable.</h3>
-          <p>Then start annotation.</p>
+        <div v-else-if="userOntologies" class="empty-state">
+          <h3>Select a variable to annotate</h3>
+          <p>Choose a variable from the list on the left.</p>
         </div>
       </div>
     </div>
@@ -70,12 +98,12 @@ import VariableGroupsList from './components/VariableGroupsList.vue'
 import DynamicAnnotationForm from './components/DynamicAnnotationForm.vue'
 import AnnotationList from './components/AnnotationList.vue'
 import MessageDisplay from './components/MessageDisplay.vue'
+import OntologySelector from './components/OntologySelector.vue'
 import { useCellML } from './composables/useCellML'
 import { useAnnotations } from './composables/useAnnotations'
 
 const { 
   model,
-  modelName,
   components,
   groupedVariables, 
   parseModel, 
@@ -91,12 +119,40 @@ const {
   exportRDF,
   clearAllAnnotations,
   getAnnotationCount
-} = useAnnotations(components)
+} = useAnnotations()
 
 const message = ref({ text: '', type: '' })
+const showOntologySelector = ref(false)
+const userOntologies = ref(null)
 
 const rdfTripleCount = computed(() => {
   return getAnnotationCount()
+})
+
+// Calculate model statistics for ontology selection
+const modelStats = computed(() => {
+  if (!groupedVariables.value) return null
+  
+  let biochemistryCount = 0
+  let fluidDynamicsCount = 0
+  let totalVariables = 0
+  
+  Object.values(groupedVariables.value).forEach(variables => {
+    variables.forEach(variable => {
+      totalVariables++
+      if (variable.domain === 'Biochemistry') {
+        biochemistryCount++
+      } else if (variable.domain === 'Fluid dynamics') {
+        fluidDynamicsCount++
+      }
+    })
+  })
+  
+  return {
+    totalVariables,
+    biochemistryCount,
+    fluidDynamicsCount
+  }
 })
 
 onMounted(() => {
@@ -105,7 +161,23 @@ onMounted(() => {
 
 const handleFileLoaded = (content) => {
   parseModel(content)
-  showMessage('Model loaded successfully', 'success')
+  // After model is loaded, show ontology selector
+  showOntologySelector.value = true
+  showMessage('Model loaded successfully. Please select ontologies.', 'success')
+}
+
+const handleOntologiesSelected = (ontologies) => {
+  userOntologies.value = ontologies
+  showOntologySelector.value = false
+  console.log('User selected ontologies:', ontologies)
+  showMessage(`${Object.keys(ontologies).length} ontologies selected`, 'success')
+}
+
+const handleOntologySelectorClose = () => {
+  showOntologySelector.value = false
+  if (!userOntologies.value && model.value) {
+    showMessage('Ontology selection cancelled. Click "Select Ontologies" to continue.', 'info')
+  }
 }
 
 const handleVariableSelected = (variable) => {
@@ -113,7 +185,15 @@ const handleVariableSelected = (variable) => {
 }
 
 const handleAnnotationAdded = (annotation) => {
+  console.log('=== APP.VUE RECEIVED ANNOTATION ===')
+  console.log('Annotation:', annotation)
+  console.log('Current variable:', selectedVariable.value?.name)
+  
   addAnnotation(annotation)
+  
+  console.log('After adding, current annotations:', currentAnnotations.value)
+  console.log('RDF triple count:', rdfTripleCount.value)
+  
   showMessage('Annotation added successfully', 'success')
 }
 
@@ -125,7 +205,7 @@ const handleExportRDF = async () => {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${components.value || 'model'}_annotations.ttl`
+    a.download = `${model.value.name() || 'model'}_annotations.ttl`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -165,3 +245,52 @@ const showMessage = (text, type) => {
   }, 3000)
 }
 </script>
+
+<style scoped>
+.waiting-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.waiting-state h3 {
+  margin-bottom: 10px;
+  color: #666;
+}
+
+.selected-ontologies-info {
+  margin: 15px 0;
+}
+
+.btn-change-ontologies {
+  padding: 8px 16px;
+  background: #e3f2fd;
+  border: 1px solid #2196F3;
+  border-radius: 6px;
+  color: #1976D2;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-change-ontologies:hover {
+  background: #2196F3;
+  color: white;
+}
+
+.waiting-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.waiting-state h3 {
+  margin-bottom: 10px;
+  color: #666;
+}
+
+.waiting-state .btn {
+  margin-top: 20px;
+}
+</style>
