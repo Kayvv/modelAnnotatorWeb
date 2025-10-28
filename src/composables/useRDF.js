@@ -4,6 +4,7 @@ const { namedNode, literal, quad } = DataFactory
 
 export function useRDF() {
     const store = ref([])
+    const usedNamespaces = ref(new Set())
 
     const namespaces = {
         rdf: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
@@ -28,9 +29,11 @@ export function useRDF() {
             const [ns, localId] = id.split(':')
             const namespace = namespaces[ns.toLowerCase()]
             if (namespace) {
+                usedNamespaces.value.add(ns.toLowerCase())
                 return namespace + localId
             }
         }
+        usedNamespaces.value.add(prefix)
         return namespaces[prefix] + id
     }
 
@@ -42,6 +45,21 @@ export function useRDF() {
         const subjectNode = namedNode(subject)
         const predicateNode = namedNode(predicate)
         const objectNode = namedNode(object)
+
+        const extractNamespace = (uri) => {
+            for (const [prefix, namespace] of Object.entries(namespaces)) {
+                if (uri.startsWith(namespace)) {
+                    usedNamespaces.value.add(prefix)
+                    return
+                }
+            }
+        }
+
+        extractNamespace(predicate)
+        extractNamespace(object)
+        if (!subject.startsWith('#')) {
+            extractNamespace(subject)
+        }
 
         const triple = quad(subjectNode, predicateNode, objectNode)
         store.value.push(triple)
@@ -634,7 +652,7 @@ export function useRDF() {
         const { type, domain, data, variable } = annotation
 
         const variableInfo = {
-            modelName: variable.component.name, 
+            modelName: variable.component.name,
             component: variable.component,
             variable: variable
         }
@@ -659,23 +677,22 @@ export function useRDF() {
     }
 
     const exportToTurtle = () => {
-        const writer = new Writer({
-            prefixes: {
-                rdf: namespaces.rdf,
-                rdfs: namespaces.rdfs,
-                dc: namespaces.dc,
-                bqbiol: namespaces.bqbiol,
-                bqmodel: namespaces.bqmodel,
-                semsim: namespaces.semsim,
-                chebi: namespaces.chebi,
-                go: namespaces.go,
-                pr: namespaces.pr,
-                fma: namespaces.fma,
-                uberon: namespaces.uberon,
-                opb: namespaces.opb,
-                sbo: namespaces.sbo,
-                uniprot: namespaces.uniprot
+        const usedPrefixes = {}
+        const alwaysInclude = ['rdf', 'bqbiol', 'semsim']
+        alwaysInclude.forEach(prefix => {
+            if (namespaces[prefix]) {
+                usedPrefixes[prefix] = namespaces[prefix]
             }
+        })
+
+        usedNamespaces.value.forEach(prefix => {
+            if (namespaces[prefix]) {
+                usedPrefixes[prefix] = namespaces[prefix]
+            }
+        })
+
+        const writer = new Writer({
+            prefixes: usedPrefixes
         })
 
         writer.addQuads(store.value)
@@ -690,6 +707,7 @@ export function useRDF() {
 
     const clearAnnotations = () => {
         store.value = []
+        usedNamespaces.value.clear()
     }
 
     const getAnnotationCount = () => {
@@ -702,6 +720,7 @@ export function useRDF() {
         addAnnotation,
         exportToTurtle,
         clearAnnotations,
-        getAnnotationCount
+        getAnnotationCount,
+        getUsedNamespaces: () => Array.from(usedNamespaces.value)
     }
 }

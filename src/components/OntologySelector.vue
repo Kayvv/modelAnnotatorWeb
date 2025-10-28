@@ -201,33 +201,32 @@
               </span>
             </div>
 
-            <!-- Group terms by category -->
-            <div class="terms-by-category">
-              <div 
-                v-for="(categoryTerms, category) in getTermsByCategory(ontologyId)"
-                :key="category"
-                class="category-group"
+            <div class="terms-search">
+              <input 
+                type="text"
+                :placeholder="`Search ${getOntologyCommonTerms(ontologyId)?.name || ''} terms...`"
+                v-model="termSearchQueries[ontologyId]"
+                class="search-input"
+              />
+            </div>
+
+            <div class="terms-grid-simple">
+              <div
+                v-for="term in getFilteredTermsForOntology(ontologyId)"
+                :key="term.id"
+                class="term-item"
+                :class="{ selected: isTermSelected(term.id) }"
               >
-                <h4 class="category-name">{{ category }}</h4>
-                <div class="terms-grid">
-                  <div
-                    v-for="term in categoryTerms"
-                    :key="term.id"
-                    class="term-item"
-                    :class="{ selected: isTermSelected(term.id) }"
-                  >
-                    <input
-                      type="checkbox"
-                      :id="term.id"
-                      :value="term.id"
-                      v-model="selectedTerms"
-                    />
-                    <label :for="term.id">
-                      <span class="term-id">{{ term.id }}</span>
-                      <span class="term-label">{{ term.label }}</span>
-                    </label>
-                  </div>
-                </div>
+                <input
+                  type="checkbox"
+                  :id="term.id"
+                  :value="term.id"
+                  v-model="selectedTerms"
+                />
+                <label :for="term.id">
+                  <span class="term-id">{{ term.id }}</span>
+                  <span class="term-label">{{ term.label }}</span>
+                </label>
               </div>
             </div>
           </div>
@@ -262,6 +261,7 @@ const emit = defineEmits(['ontologies-selected'])
 const currentStep = ref(1)
 const selectedOntologies = ref([])
 const selectedTerms = ref([])
+const termSearchQueries = ref({})
 
 const biochemistryOntologies = [
   {
@@ -431,21 +431,6 @@ const getOntologyCommonTerms = (ontologyId) => {
   return ontologyCommonTerms[ontologyId]
 }
 
-const getTermsByCategory = (ontologyId) => {
-  const ontology = ontologyCommonTerms[ontologyId]
-  if (!ontology) return {}
-  
-  const grouped = {}
-  ontology.terms.forEach(term => {
-    if (!grouped[term.category]) {
-      grouped[term.category] = []
-    }
-    grouped[term.category].push(term)
-  })
-  
-  return grouped
-}
-
 const isTermSelected = (termId) => {
   return selectedTerms.value.includes(termId)
 }
@@ -514,6 +499,19 @@ const confirmSelection = () => {
   
   console.log('Final ontology config:', ontologyConfig)
   emit('ontologies-selected', ontologyConfig)
+}
+
+const getFilteredTermsForOntology = (ontologyId) => {
+  const ontology = ontologyCommonTerms[ontologyId]
+  if (!ontology) return []
+  
+  const query = termSearchQueries.value[ontologyId]?.toLowerCase() || ''
+  if (!query) return ontology.terms
+  
+  return ontology.terms.filter(term => 
+    term.id.toLowerCase().includes(query) || 
+    term.label.toLowerCase().includes(query)
+  )
 }
 </script>
 
@@ -842,25 +840,28 @@ const confirmSelection = () => {
   font-weight: 500;
 }
 
-.terms-by-category {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.terms-search {
+  margin-bottom: 15px;
 }
 
-.category-group {
-  background: white;
+.search-input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 2px solid #e0e0e0;
   border-radius: 6px;
-  padding: 15px;
+  font-size: 14px;
+  transition: border-color 0.3s;
 }
 
-.category-name {
-  margin: 0 0 12px 0;
-  color: #666;
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.search-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.terms-grid-simple {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
 }
 
 .terms-grid {
