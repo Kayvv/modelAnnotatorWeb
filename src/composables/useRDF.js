@@ -24,6 +24,39 @@ export function useRDF() {
         uniprot: 'http://identifiers.org/uniprot/'
     }
 
+    const removeAnnotationsForVariable = (variableURI) => {
+        // Find and remove all triples related to this variable
+        const toRemove = []
+
+        store.value.forEach((triple, index) => {
+            const subject = triple.subject.value
+
+            // Remove direct annotations
+            if (subject === variableURI) {
+                toRemove.push(index)
+            }
+
+            // Remove composite/process/force nodes related to this variable
+            if (subject.startsWith(variableURI + '_')) {
+                toRemove.push(index)
+            }
+
+            // Also check if this triple references the variable as object
+            const object = triple.object.value
+            if (object === variableURI || object.startsWith(variableURI + '_')) {
+                toRemove.push(index)
+            }
+        })
+
+        // Remove in reverse order to maintain indices
+        toRemove.sort((a, b) => b - a)
+        toRemove.forEach(index => {
+            store.value.splice(index, 1)
+        })
+
+        console.log(`Removed ${toRemove.length} triples for ${variableURI}`)
+    }
+
     const createURI = (prefix, id) => {
         if (id.includes(':')) {
             const [ns, localId] = id.split(':')
@@ -721,6 +754,7 @@ export function useRDF() {
         exportToTurtle,
         clearAnnotations,
         getAnnotationCount,
-        getUsedNamespaces: () => Array.from(usedNamespaces.value)
+        getUsedNamespaces: () => Array.from(usedNamespaces.value),
+        removeAnnotationsForVariable
     }
 }

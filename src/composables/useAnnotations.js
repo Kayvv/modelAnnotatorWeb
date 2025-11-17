@@ -4,7 +4,7 @@ import { useRDF } from './useRDF'
 export function useAnnotations() {
     const selectedVariable = ref(null)
     const annotations = ref({})
-    const { addAnnotation: addRDFAnnotation, exportToTurtle, clearAnnotations, getAnnotationCount } = useRDF()
+    const { addAnnotation: addRDFAnnotation, exportToTurtle, clearAnnotations, getAnnotationCount, removeAnnotationsForVariable } = useRDF()
 
     const currentAnnotations = computed(() => {
         if (!selectedVariable.value) return []
@@ -38,6 +38,10 @@ export function useAnnotations() {
 
         const varKey = getVariableKey(selectedVariable.value)
 
+        // Remove existing RDF annotations for this variable
+        const variableURI = `#${selectedVariable.value.component.name}.${selectedVariable.value.name}`
+        removeAnnotationsForVariable(variableURI)
+
         try {
             const enrichedAnnotation = {
                 ...annotation,
@@ -60,13 +64,16 @@ export function useAnnotations() {
         const annotationSummary = createAnnotationSummary(annotation)
         console.log('Created annotation summary:', annotationSummary)
 
+        // Replace existing annotation of same type
         const existingIndex = annotations.value[varKey]
             .findIndex(a => a.type === annotation.type)
 
         if (existingIndex >= 0) {
             annotations.value[varKey][existingIndex] = annotationSummary
+            console.log('Replaced existing annotation')
         } else {
             annotations.value[varKey].push(annotationSummary)
+            console.log('Added new annotation')
         }
 
         console.log('Current annotations for variable:', annotations.value[varKey])
