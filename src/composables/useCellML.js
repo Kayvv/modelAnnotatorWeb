@@ -10,20 +10,32 @@ export function useCellML() {
     const variables = ref([])
     const parser = ref(null)
     const printer = ref(null)
-    const libcellml = ref(null);
+    const libcellml = ref(null)
+    const importer = ref(null)
+    const importIssues = ref([])
+    const hasUnresolvedImports = ref(false)
+    const importUrls = ref([])
 
     const groupedVariables = computed(() => {
         if (!libcellml.value || !variables.value.length) {
-            return { 'Uncategorized': variables.value }
+            return {}
         }
 
-        const groups = {}
-        Object.keys(unitsCategories).forEach(categoryName => {
-            groups[categoryName] = []
-        })
-        groups['Uncategorized'] = []
+        const byComponent = {}
 
         variables.value.forEach(variable => {
+            const componentName = variable.component.name
+
+            if (!byComponent[componentName]) {
+                byComponent[componentName] = {
+                    name: componentName,
+                    component: variable.component,
+                    categories: {},
+                    totalVariables: 0,
+                    needsAnnotation: 0
+                }
+            }
+
             let assigned = false
             let variableUnitName = variable.units || '???'
             let variableUnitsObject = null
@@ -69,7 +81,17 @@ export function useCellML() {
                                         domain: unitConfig.domain || 'Unknown',
                                         annotationType: unitConfig.annotationType || null
                                     }
-                                    groups[categoryName].push(enrichedVariable)
+
+                                    if (!byComponent[componentName].categories[categoryName]) {
+                                        byComponent[componentName].categories[categoryName] = []
+                                    }
+                                    byComponent[componentName].categories[categoryName].push(enrichedVariable)
+                                    byComponent[componentName].totalVariables++
+
+                                    if (unitConfig.annotationType) {
+                                        byComponent[componentName].needsAnnotation++
+                                    }
+
                                     assigned = true
                                 }
 
@@ -85,10 +107,16 @@ export function useCellML() {
                 }
 
                 if (!assigned) {
-                    groups['Uncategorized'].push({
+                    // Uncategorized
+                    if (!byComponent[componentName].categories['Uncategorized']) {
+                        byComponent[componentName].categories['Uncategorized'] = []
+                    }
+                    byComponent[componentName].categories['Uncategorized'].push({
                         ...variable,
-                        domain: 'Unknown'
+                        domain: 'Unknown',
+                        category: 'Uncategorized'
                     })
+                    byComponent[componentName].totalVariables++
                 }
 
                 if (variableUnitsObject?.delete) {
@@ -100,10 +128,15 @@ export function useCellML() {
                 console.warn(`Error processing variable ${variable.name}:`, error)
 
                 if (!assigned) {
-                    groups['Uncategorized'].push({
+                    if (!byComponent[componentName].categories['Uncategorized']) {
+                        byComponent[componentName].categories['Uncategorized'] = []
+                    }
+                    byComponent[componentName].categories['Uncategorized'].push({
                         ...variable,
-                        domain: 'Unknown'
+                        domain: 'Unknown',
+                        category: 'Uncategorized'
                     })
+                    byComponent[componentName].totalVariables++
                 }
 
                 if (variableUnitsObject?.delete) {
@@ -112,14 +145,9 @@ export function useCellML() {
             }
         })
 
-        const nonEmptyGroups = {}
-        Object.entries(groups).forEach(([groupName, vars]) => {
-            if (vars.length > 0) {
-                nonEmptyGroups[groupName] = vars
-            }
-        })
-        return nonEmptyGroups
+        return byComponent
     })
+
 
     const initLibCellML = async () => {
         try {
@@ -141,14 +169,84 @@ export function useCellML() {
         }
     }
 
-    const parseModel = (content) => {
+    const getAllImportUrls = (model) => {
+        const urls = new Set()
+
         try {
-            model.value = markRaw(parser.value.parseModel(content))
+            const componentCount = model.componentCount()
+            for (let i = 0; i < componentCount; i++) {
+                const component = model.componentByIndex(i)
+
+                if (component.isImport && component.isImport()) {
+                    const importSource = component.importSource()
+                    if (importSource && importSource.url) {
+                        const url = importSource.url()
+                        if (url) urls.add(url)
+                    }
+                }
+            }
+
+            const unitsCount = model.unitsCount()
+            for (let i = 0; i < unitsCount; i++) {
+                const units = model.unitsByIndex(i)
+
+                if (units.isImport && units.isImport()) {
+                    const importSource = units.importSource()
+                    if (importSource && importSource.url) {
+                        const url = importSource.url()
+                        if (url) urls.add(url)
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.warn('Error getting import URLs:', error)
+        }
+
+        return Array.from(urls)
+    }
+
+    const addImportedFile = async (filename, content) => {
+        try {
+            if (!importer.value) {
+                importer.value = markRaw(new libcellml.value.Importer(false))
+            }
+
+            const importedModel = parser.value.parseModel(content)
+
+            if (!importedModel) {
+                console.error(`Failed to parse imported file: ${filename}`)
+                return false
+            }
+
+            const modelAdded = importer.value.addModel(importedModel, filename)
+
+            if (!modelAdded) {
+                console.error(`Failed to add import source: ${filename}`)
+                return false
+            }
+
+            // Resolve and flatten model
+            importer.value.resolveImports(model.value, "")
+            const flattenedModel = importer.value.flattenModel(model.value)
+
+            if (flattenedModel) {
+                model.value = markRaw(flattenedModel)
+                await updateModelData()
+            }
+
+            collectImportIssues(importer.value)
+
+        } catch (error) {
+            console.error('Error adding imported file:', error)
+            return false
+        }
+    }
+
+    const updateModelData = async () => {
+        try {
             components.value = []
             variables.value = []
-
-            modelName.value = model.value.name()
-            console.log("model name", modelName.value)
 
             const componentCount = model.value.componentCount()
 
@@ -165,7 +263,145 @@ export function useCellML() {
                 for (let j = 0; j < varCount; j++) {
                     const variable = markRaw(component.variableByIndex(j))
 
-                    // Get units
+                    let unitsName = '???'
+                    let unitsObject = null
+
+                    try {
+                        if (variable.units && typeof variable.units === 'function') {
+                            unitsObject = variable.units()
+                            if (unitsObject) {
+                                unitsName = unitsObject.name?.() || '???'
+                                if (unitsName === '???' || !unitsName) {
+                                    unitsName = unitsObject.unitAttributeReference?.(0) || '???'
+                                }
+                            }
+                        }
+                    } catch (unitsError) {
+                        console.warn(`Error getting units for variable ${j}:`, unitsError)
+                    }
+
+                    variables.value.push({
+                        name: variable.name() || `Variable${j + 1}`,
+                        units: unitsName,
+                        initialValue: variable.initialValue() || '',
+                        interfaceType: variable.interfaceType() || 'none',
+                        component: componentInfo,
+                        variable: variable
+                    })
+                }
+            }
+        } catch (error) {
+            console.error('Error updating model data:', error)
+            throw error
+        }
+    }
+
+    const collectImportIssues = (importer) => {
+        const issues = []
+
+        try {
+            if (model.value.hasUnresolvedImports()) {
+                hasUnresolvedImports.value = true
+
+                const importCount = importer.importSourceCount()
+
+                for (let i = 0; i < importCount; i++) {
+                    const importSource = importer.importSource(i)
+                    const url = importSource.url()
+
+                    issues.push({
+                        type: 'unresolved_import',
+                        url: url,
+                        message: `⚠️ Unresolved import: ${url}`
+                    })
+                }
+            }
+
+            if (importer.value) {
+                const issueCount = importer.value.issueCount()
+                console.log(`Importer has ${issueCount} issues`)
+
+                for (let i = 0; i < issueCount; i++) {
+                    const issue = importer.value.issue(i)
+                    if (issue) {
+                        const level = issue.level()
+                        const description = issue.description()
+
+                        issues.push({
+                            type: 'importer_issue',
+                            level: level,
+                            message: `${level === 0 ? 'ℹ️' : level === 1 ? '⚠️' : '❌'} ${description}`
+                        })
+                    }
+                }
+            }
+
+            const componentCount = model.value.componentCount()
+            for (let i = 0; i < componentCount; i++) {
+                const component = model.value.componentByIndex(i)
+
+                if (component.isImport && component.isImport()) {
+                    const importSource = component.importSource()
+                    if (importSource) {
+                        issues.push({
+                            type: 'info',
+                            message: `ℹ️ Component "${component.name()}" is imported from: ${importSource.url()}`
+                        })
+                    }
+                }
+            }
+
+            const unitsCount = model.value.unitsCount()
+            for (let i = 0; i < unitsCount; i++) {
+                const units = model.value.unitsByIndex(i)
+
+                if (units.isImport && units.isImport()) {
+                    const importSource = units.importSource()
+                    if (importSource) {
+                        issues.push({
+                            type: 'info',
+                            message: `ℹ️ Units "${units.name()}" is imported from: ${importSource.url()}`
+                        })
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.warn('Error collecting import issues:', error)
+            issues.push({
+                type: 'error',
+                message: `Error checking imports: ${error.message}`
+            })
+        }
+
+        importIssues.value = issues
+        return issues
+    }
+
+    const parseModel = async (content) => {
+        try {
+            model.value = markRaw(parser.value.parseModel(content))
+            components.value = []
+            variables.value = []
+
+            modelName.value = model.value.name()
+            importUrls.value = getAllImportUrls(model.value)
+
+            const componentCount = model.value.componentCount()
+
+            for (let i = 0; i < componentCount; i++) {
+                const component = markRaw(model.value.componentByIndex(i))
+                const componentInfo = {
+                    name: component.name() || `component ${i + 1}`,
+                    variableCount: component.variableCount(),
+                    component: component
+                }
+                components.value.push(componentInfo)
+
+                const varCount = component.variableCount()
+                for (let j = 0; j < varCount; j++) {
+                    const variable = markRaw(component.variableByIndex(j))
+
                     let unitsName = '???'
                     let unitsObject = null
 
@@ -195,6 +431,7 @@ export function useCellML() {
             }
         } catch (error) {
             console.error('Model parse failed:', error)
+            throw error
         }
     }
 
@@ -226,6 +463,11 @@ export function useCellML() {
         groupedVariables,
         parseModel,
         exportModel,
-        initLibCellML
+        initLibCellML,
+        importIssues,
+        hasUnresolvedImports,
+        importer,
+        importUrls,
+        addImportedFile
     }
 }

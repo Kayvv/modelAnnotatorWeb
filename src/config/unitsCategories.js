@@ -52,6 +52,12 @@ export const unitsCategories = {
         units: [
             // Biochemistry Quantities
             {
+                name: "mole",
+                definition: [["mole"]],
+                domain: "Biochemistry",
+                annotationType: "Quantities"
+            },
+            {
                 name: "fmol",
                 definition: [["mole", "femto"]],
                 domain: "Biochemistry",

@@ -191,7 +191,7 @@ export const biochemistryTemplates = {
             },
             {
                 id: "target",
-                label: "Target",
+                label: "Sink",
                 type: "composite",
                 required: true,
                 subfields: [
@@ -403,7 +403,7 @@ export const fluidDynamicsTemplates = {
             },
             {
                 id: "target",
-                label: "Target Location",
+                label: "Sink Location",
                 type: "composite",
                 required: true,
                 subfields: [

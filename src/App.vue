@@ -16,14 +16,24 @@
     <div class="content">
       <div class="left-panel">
         <FileLoader @file-loaded="handleFileLoaded" />
-        <ModelInfo v-if="model" :model="model" :components="components" />
-
-        <VariableGroupsList 
-          v-if="Object.keys(groupedVariables).length > 0"
-          :grouped-variables="groupedVariables" 
-          :selected-variable="selectedVariable"
-          @variable-selected="handleVariableSelected"
+        <ModelInfo 
+          v-if="model" 
+          :model="model" 
+          :components="components"
+          :total-variables="getTotalVariables()"
+          :import-issues="importIssues"
+          :has-unresolved-imports="hasUnresolvedImports"
+          :import-urls="importUrls"
+          @import-file-uploaded="handleImportFileUpload"
         />
+
+  <ComponentVariablesList 
+    v-if="Object.keys(groupedVariables).length > 0"
+    :grouped-variables="groupedVariables" 
+    :selected-variable="selectedVariable"
+    :annotations="annotations"
+    @variable-selected="handleVariableSelected"
+  />
       </div>
 
       <div class="right-panel">
@@ -94,7 +104,7 @@
 import { ref, computed, onMounted } from "vue";
 import FileLoader from './components/FileLoader.vue'
 import ModelInfo from './components/ModelInfo.vue'
-import VariableGroupsList from './components/VariableGroupsList.vue'
+import ComponentVariablesList from './components/ComponentVariablesList.vue'
 import DynamicAnnotationForm from './components/DynamicAnnotationForm.vue'
 import AnnotationList from './components/AnnotationList.vue'
 import MessageDisplay from './components/MessageDisplay.vue'
@@ -108,7 +118,11 @@ const {
   groupedVariables, 
   parseModel, 
   exportModel, 
-  initLibCellML 
+  initLibCellML,
+  importIssues,
+  hasUnresolvedImports,
+  importUrls,
+  addImportedFile
 } = useCellML()
 
 const {
@@ -118,8 +132,17 @@ const {
   addAnnotation,
   exportRDF,
   clearAllAnnotations,
-  getAnnotationCount
+  getAnnotationCount,
+  annotations
 } = useAnnotations()
+
+const getTotalVariables = () => {
+  let total = 0
+  Object.values(groupedVariables.value).forEach(componentData => {
+    total += componentData.totalVariables
+  })
+  return total
+}
 
 const message = ref({ text: '', type: '' })
 const showOntologySelector = ref(false)
@@ -128,6 +151,25 @@ const userOntologies = ref(null)
 const rdfTripleCount = computed(() => {
   return getAnnotationCount()
 })
+
+
+const handleImportFileUpload = async ({ filename, content }) => {
+  try {
+    const success = await addImportedFile(filename, content)
+    
+    if (success) {
+      showMessage(`✓ Import file "${filename}" loaded successfully`, 'success')
+      
+      if (!hasUnresolvedImports.value) {
+        showMessage('All imports resolved!', 'success')
+      }
+    } else {
+      showMessage(`✗ Failed to load import file "${filename}"`, 'error')
+    }
+  } catch (error) {
+    showMessage(`Error loading import: ${error.message}`, 'error')
+  }
+}
 
 // Calculate model statistics for ontology selection
 const modelStats = computed(() => {
@@ -138,13 +180,15 @@ const modelStats = computed(() => {
   let totalVariables = 0
   
   Object.values(groupedVariables.value).forEach(variables => {
-    variables.forEach(variable => {
-      totalVariables++
-      if (variable.domain === 'Biochemistry') {
-        biochemistryCount++
-      } else if (variable.domain === 'Fluid dynamics') {
-        fluidDynamicsCount++
-      }
+    Object.values(variables.categories).forEach(category => {
+      Object.values(category).forEach(variable => {
+        totalVariables++
+        if (variable.domain === 'Biochemistry') {
+          biochemistryCount++
+        } else if (variable.domain === 'Fluid dynamics') {
+          fluidDynamicsCount++
+        }
+      })
     })
   })
   
@@ -159,11 +203,15 @@ onMounted(() => {
   initLibCellML()
 })
 
-const handleFileLoaded = (content) => {
-  parseModel(content)
-  // After model is loaded, show ontology selector
-  showOntologySelector.value = true
-  showMessage('Model loaded successfully. Please select ontologies.', 'success')
+const handleFileLoaded = async (content) => {
+  try {
+    await parseModel(content)
+    
+    showOntologySelector.value = true
+    
+  } catch (error) {
+    showMessage(`❌ Error loading model: ${error.message}`, 'error')
+  }
 }
 
 const handleOntologiesSelected = (ontologies) => {

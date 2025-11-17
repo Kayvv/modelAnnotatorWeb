@@ -107,8 +107,8 @@ export function useAnnotations() {
                 summary.details = [
                     { label: 'Source Species', value: data.source?.species || 'N/A' },
                     { label: 'Source Compartment', value: data.source?.compartment || 'N/A' },
-                    { label: 'Target Species', value: data.target?.species || 'N/A' },
-                    { label: 'Target Compartment', value: data.target?.compartment || 'N/A' },
+                    { label: 'Sink Species', value: data.target?.species || 'N/A' },
+                    { label: 'Sink Compartment', value: data.target?.compartment || 'N/A' },
                     { label: 'Physical Property', value: data.physicalProperty || 'N/A' }
                 ]
             }
@@ -134,7 +134,7 @@ export function useAnnotations() {
             } else if (type === 'Efforts') {
                 summary.details = [
                     { label: 'Source Location', value: data.source?.location || 'N/A' },
-                    { label: 'Target Location', value: data.target?.location || 'N/A' },
+                    { label: 'Sink Location', value: data.target?.location || 'N/A' },
                     { label: 'Physical Property', value: data.physicalProperty || 'N/A' }
                 ]
             }
@@ -166,6 +166,7 @@ export function useAnnotations() {
         addAnnotation,
         exportRDF,
         clearAllAnnotations,
-        getAnnotationCount
+        getAnnotationCount,
+        annotations
     }
 }
