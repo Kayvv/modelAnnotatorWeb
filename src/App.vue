@@ -15,7 +15,10 @@
 
     <div class="content">
       <div class="left-panel">
-        <FileLoader @file-loaded="handleFileLoaded" />
+        <FileLoader 
+          @file-loaded="handleFileLoaded" 
+          @rdf-loaded="handleRDFLoaded"
+        />
         <ModelInfo 
           v-if="model" 
           :model="model" 
@@ -131,6 +134,7 @@ const {
   selectVariable,
   addAnnotation,
   exportRDF,
+  importRDF,
   clearAllAnnotations,
   getAnnotationCount,
   annotations
@@ -211,6 +215,22 @@ const handleFileLoaded = async (content) => {
     
   } catch (error) {
     showMessage(`❌ Error loading model: ${error.message}`, 'error')
+  }
+}
+
+const handleRDFLoaded = async (content) => {
+  try {
+    if (!model.value) {
+      showMessage('⚠️ Please load a CellML model first before importing RDF annotations', 'warning')
+      return
+    }
+    
+    const tripleCount = await importRDF(content)
+    
+    showMessage(`✅ Successfully imported ${tripleCount} RDF triples`, 'success')
+  } catch (error) {
+    console.error('RDF load error:', error)
+    showMessage(`❌ Error loading RDF: ${error.message}`, 'error')
   }
 }
 

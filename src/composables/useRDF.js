@@ -2,7 +2,15 @@ import { ref } from 'vue'
 import { Writer, DataFactory } from 'n3'
 const { namedNode, literal, quad } = DataFactory
 
+// Create singleton instance
+let rdfInstance = null
+
 export function useRDF() {
+    // Return existing instance if already created
+    if (rdfInstance) {
+        return rdfInstance
+    }
+
     const store = ref([])
     const usedNamespaces = ref(new Set())
 
@@ -737,6 +745,50 @@ export function useRDF() {
             })
         })
     }
+    const importFromTurtle = async (turtleString) => {
+        try {
+            const { Parser } = await import('n3')
+            const parser = new Parser()
+
+            return new Promise((resolve, reject) => {
+                const quads = []
+
+                parser.parse(turtleString, (error, quad, prefixes) => {
+                    if (error) {
+                        console.error('Parse error:', error)
+                        reject(error)
+                        return
+                    }
+
+                    if (quad) {
+                        quads.push(quad)
+
+                        // Track used namespaces from the imported file
+                        const subject = quad.subject.value
+                        const predicate = quad.predicate.value
+                        const object = quad.object.value
+
+                        // Extract and track namespaces
+                        for (const [prefix, namespace] of Object.entries(namespaces)) {
+                            if (predicate.startsWith(namespace) ||
+                                (typeof object === 'string' && object.startsWith(namespace))) {
+                                usedNamespaces.value.add(prefix)
+                            }
+                        }
+                    } else {
+                        // Parsing complete - add all quads to store
+                        console.log('Adding quads to store:', quads.length)
+                        store.value = [...store.value, ...quads]
+                        console.log('Store now has:', store.value.length, 'triples')
+                        resolve(quads.length)
+                    }
+                })
+            })
+        } catch (error) {
+            console.error('Import error:', error)
+            throw error
+        }
+    }
 
     const clearAnnotations = () => {
         store.value = []
@@ -747,14 +799,18 @@ export function useRDF() {
         return store.value.length
     }
 
-    return {
+    // Store the instance
+    rdfInstance = {
         store,
         namespaces,
         addAnnotation,
         exportToTurtle,
+        importFromTurtle,
         clearAnnotations,
         getAnnotationCount,
         getUsedNamespaces: () => Array.from(usedNamespaces.value),
         removeAnnotationsForVariable
     }
+
+    return rdfInstance
 }

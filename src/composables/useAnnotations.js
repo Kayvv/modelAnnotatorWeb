@@ -1,10 +1,12 @@
 import { ref, computed } from 'vue'
 import { useRDF } from './useRDF'
 
+// Create shared RDF instance
+const rdf = useRDF()
+
 export function useAnnotations() {
     const selectedVariable = ref(null)
     const annotations = ref({})
-    const { addAnnotation: addRDFAnnotation, exportToTurtle, clearAnnotations, getAnnotationCount, removeAnnotationsForVariable } = useRDF()
 
     const currentAnnotations = computed(() => {
         if (!selectedVariable.value) return []
@@ -40,7 +42,7 @@ export function useAnnotations() {
 
         // Remove existing RDF annotations for this variable
         const variableURI = `#${selectedVariable.value.component.name}.${selectedVariable.value.name}`
-        removeAnnotationsForVariable(variableURI)
+        rdf.removeAnnotationsForVariable(variableURI)
 
         try {
             const enrichedAnnotation = {
@@ -50,9 +52,9 @@ export function useAnnotations() {
                 }
             }
 
-            addRDFAnnotation(enrichedAnnotation)
+            rdf.addAnnotation(enrichedAnnotation)
             console.log('RDF annotation added successfully')
-            console.log('Total RDF triples:', getAnnotationCount())
+            console.log('Total RDF triples:', rdf.getAnnotationCount())
         } catch (error) {
             console.error('Error adding RDF annotation:', error)
         }
@@ -153,7 +155,7 @@ export function useAnnotations() {
 
     const exportRDF = async () => {
         try {
-            const turtle = await exportToTurtle()
+            const turtle = await rdf.exportToTurtle()
             return turtle
         } catch (error) {
             console.error('Error exporting RDF:', error)
@@ -161,9 +163,70 @@ export function useAnnotations() {
         }
     }
 
+    const importRDF = async (turtleString) => {
+        try {
+            const tripleCount = await rdf.importFromTurtle(turtleString)
+
+            console.log('Imported triples:', tripleCount)
+            console.log('Current store size:', rdf.store.value.length)
+
+            // Parse the RDF to extract annotation summaries
+            parseImportedAnnotations(turtleString)
+
+            return tripleCount
+        } catch (error) {
+            console.error('Error importing RDF:', error)
+            throw error
+        }
+    }
+
+    const parseImportedAnnotations = (turtleString) => {
+        // Extract variable URIs and create summaries
+        // Match patterns like #component.variable
+        const lines = turtleString.split('\n')
+        const processedVars = new Set()
+
+        lines.forEach(line => {
+            // Match subject URIs like #component.variable
+            const match = line.match(/#([^_\s<>]+)\.([^\s_<>]+)/)
+            if (match) {
+                const componentName = match[1]
+                const variableName = match[2]
+                const varKey = `${componentName}.${variableName}`
+
+                if (!processedVars.has(varKey)) {
+                    processedVars.add(varKey)
+
+                    // Create a placeholder annotation summary
+                    if (!annotations.value[varKey]) {
+                        annotations.value[varKey] = []
+                    }
+
+                    // Check if this variable already has imported annotations
+                    const hasImported = annotations.value[varKey].some(a => a.type === 'Imported')
+
+                    if (!hasImported) {
+                        // Add a generic imported annotation marker
+                        annotations.value[varKey].push({
+                            type: 'Imported',
+                            domain: 'Loaded from file',
+                            details: [
+                                { label: 'Status', value: 'Loaded from RDF file' },
+                                { label: 'Variable', value: `${componentName}.${variableName}` }
+                            ]
+                        })
+                    }
+                }
+            }
+        })
+
+        console.log(`Parsed annotations for ${processedVars.size} variables`)
+        console.log('Annotations object:', annotations.value)
+    }
+
     const clearAllAnnotations = () => {
         annotations.value = {}
-        clearAnnotations()
+        rdf.clearAnnotations()
     }
 
     return {
@@ -172,8 +235,9 @@ export function useAnnotations() {
         selectVariable,
         addAnnotation,
         exportRDF,
+        importRDF,
         clearAllAnnotations,
-        getAnnotationCount,
+        getAnnotationCount: () => rdf.getAnnotationCount(),
         annotations
     }
 }
