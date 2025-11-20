@@ -517,7 +517,6 @@ function injectCommonTerms(fields, userOntologies) {
 
             if (combinedTerms.length > 0) {
                 field.commonTerms = combinedTerms
-                console.log(`Injected ${combinedTerms.length} terms for ${field.ontology}`)
             }
         }
     })

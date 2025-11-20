@@ -163,15 +163,15 @@ export function useAnnotations() {
         }
     }
 
-    const importRDF = async (turtleString) => {
+    const importRDF = async (turtleString, model) => {
         try {
             const tripleCount = await rdf.importFromTurtle(turtleString)
 
             console.log('Imported triples:', tripleCount)
             console.log('Current store size:', rdf.store.value.length)
 
-            // Parse the RDF to extract annotation summaries
-            parseImportedAnnotations(turtleString)
+            // Parse with model context to match variables
+            await parseImportedAnnotationsWithModel(turtleString, model)
 
             return tripleCount
         } catch (error) {
@@ -180,48 +180,239 @@ export function useAnnotations() {
         }
     }
 
-    const parseImportedAnnotations = (turtleString) => {
-        // Extract variable URIs and create summaries
-        // Match patterns like #component.variable
-        const lines = turtleString.split('\n')
-        const processedVars = new Set()
+    const parseImportedAnnotationsWithModel = async (turtleString, model) => {
+        if (!model) {
+            console.warn('No model provided for annotation matching')
+            return
+        }
 
-        lines.forEach(line => {
-            // Match subject URIs like #component.variable
-            const match = line.match(/#([^_\s<>]+)\.([^\s_<>]+)/)
-            if (match) {
-                const componentName = match[1]
-                const variableName = match[2]
+        const { Parser } = await import('n3')
+        const parser = new Parser()
+
+        // Get all variables from the model
+        const modelVariables = new Map()
+        const componentCount = model.componentCount()
+
+        for (let i = 0; i < componentCount; i++) {
+            const component = model.componentByIndex(i)
+            const componentName = component.name()
+            const varCount = component.variableCount()
+
+            for (let j = 0; j < varCount; j++) {
+                const variable = component.variableByIndex(j)
+                const variableName = variable.name()
                 const varKey = `${componentName}.${variableName}`
 
-                if (!processedVars.has(varKey)) {
-                    processedVars.add(varKey)
+                modelVariables.set(varKey, {
+                    component: componentName,
+                    variable: variableName,
+                    fullKey: varKey
+                })
+            }
+        }
 
-                    // Create a placeholder annotation summary
-                    if (!annotations.value[varKey]) {
-                        annotations.value[varKey] = []
+        console.log('Model variables found:', Array.from(modelVariables.keys()))
+
+        // Parse RDF triples
+        return new Promise((resolve) => {
+            const triplesByVariable = new Map()
+
+            parser.parse(turtleString, (error, quad) => {
+                if (error) {
+                    console.error('Parse error:', error)
+                    return
+                }
+
+                if (quad) {
+                    const subject = quad.subject.value
+                    const predicate = quad.predicate.value
+                    const object = quad.object.value
+
+                    const varMatch = subject.match(/#([^#]+?)\.([^#]+?)(?:_annotation|_process|_potential|_force|_source|_sink|_mediator|_target|$)/)
+
+                    if (varMatch) {
+                        const componentName = varMatch[1]
+                        const variableName = varMatch[2]
+                        const varKey = `${componentName}.${variableName}`
+
+                        console.log('Extracted variable key:', varKey, 'from subject:', subject)
+
+                        // Only process if this variable exists in the model
+                        if (modelVariables.has(varKey)) {
+                            if (!triplesByVariable.has(varKey)) {
+                                triplesByVariable.set(varKey, [])
+                            }
+
+                            triplesByVariable.get(varKey).push({
+                                subject,
+                                predicate,
+                                object,
+                                objectType: quad.object.termType // 'NamedNode' or 'Literal'
+                            })
+                        } else {
+                            console.log('Variable not found in model:', varKey)
+                        }
                     }
+                } else {
+                    // Parsing complete
+                    console.log('Matched variables from RDF:', Array.from(triplesByVariable.keys()))
 
-                    // Check if this variable already has imported annotations
-                    const hasImported = annotations.value[varKey].some(a => a.type === 'Imported')
+                    // Process matched triples
+                    triplesByVariable.forEach((triples, varKey) => {
+                        processVariableTriples(varKey, triples)
+                    })
 
-                    if (!hasImported) {
-                        // Add a generic imported annotation marker
-                        annotations.value[varKey].push({
-                            type: 'Imported',
-                            domain: 'Loaded from file',
-                            details: [
-                                { label: 'Status', value: 'Loaded from RDF file' },
-                                { label: 'Variable', value: `${componentName}.${variableName}` }
-                            ]
-                        })
-                    }
+                    resolve()
+                }
+            })
+        })
+    }
+
+    const processVariableTriples = (varKey, triples) => {
+        console.log(`Processing ${triples.length} triples for ${varKey}`)
+
+        const predicates = {}
+
+        // Ontology prefix mappings
+        const ontologyPatterns = [
+            { regex: /chebi[:/]+(CHEBI:)?(\d+)/i, prefix: 'CHEBI' },
+            { regex: /GO[_:](\d{7})/i, prefix: 'GO' },
+            { regex: /fma[/#]+(?:fma[_:])?(\d+)/i, prefix: 'FMA' },
+            { regex: /UBERON[_:](\d+)/i, prefix: 'UBERON' },
+            { regex: /opb[/#]+(?:OPB[_:])?(\d+)/i, prefix: 'OPB' },
+            { regex: /pr[/#]+(?:PR[_:])?(\d+)/i, prefix: 'PR' },
+            { regex: /uniprot[/#]+([A-Z0-9]{6,10})/i, prefix: '' }, // UniProt has no prefix
+            { regex: /sbo[/#]+(?:SBO[_:])?(\d+)/i, prefix: 'SBO' }
+        ]
+
+        const extractOntologyTerm = (objValue) => {
+            for (const pattern of ontologyPatterns) {
+                const match = objValue.match(pattern.regex)
+                if (match) {
+                    const id = match[match.length - 1] // Get last capture group
+                    return pattern.prefix ? `${pattern.prefix}:${id}` : id
                 }
             }
+            // If no pattern matches, return the last part after # or /
+            return objValue.split(/[/#]/).pop()
+        }
+
+        triples.forEach(triple => {
+            const predName = triple.predicate.split(/[/#]/).pop()
+
+            if (!predicates[predName]) {
+                predicates[predName] = []
+            }
+
+            const objValue = extractOntologyTerm(triple.object)
+            predicates[predName].push(objValue)
         })
 
-        console.log(`Parsed annotations for ${processedVars.size} variables`)
-        console.log('Annotations object:', annotations.value)
+        console.log('Extracted predicates for', varKey, ':', predicates)
+
+        // Determine annotation type and domain
+        let annotationType = 'Imported'
+        let domain = 'Unknown'
+        const details = []
+
+        // Check for physical entity (Quantities)
+        if (predicates.hasPhysicalEntityReference || predicates.is) {
+            annotationType = 'Quantities'
+
+            if (predicates.is) {
+                const entities = predicates.is.filter(e => e.includes(':')).join(', ')
+                if (entities.includes('CHEBI')) {
+                    domain = 'Biochemistry'
+                    details.push({ label: 'Species', value: entities })
+                } else if (entities.includes('FMA') || entities.includes('fma')) {
+                    domain = 'Fluid dynamics'
+                    details.push({ label: 'Fluid', value: entities })
+                }
+            }
+        }
+
+        // Check for physical process (Flow rates)
+        if (predicates.hasPhysicalProcessReference) {
+            annotationType = 'Flow rates'
+
+            // Try to infer domain from species/fluid
+            if (predicates.is) {
+                const entities = predicates.is.filter(e => e.includes(':')).join(', ')
+                if (entities.includes('CHEBI')) {
+                    domain = 'Biochemistry'
+                } else if (entities.includes('FMA')) {
+                    domain = 'Fluid dynamics'
+                }
+            }
+
+            if (predicates.hasSourceParticipant) {
+                details.push({ label: 'Source', value: 'Defined' })
+            }
+            if (predicates.hasSinkParticipant) {
+                details.push({ label: 'Sink', value: 'Defined' })
+            }
+            if (predicates.hasMediatorParticipant) {
+                details.push({ label: 'Mediator', value: 'Defined' })
+            }
+        }
+
+        // Check for physical force (Efforts)
+        if (predicates.hasPhysicalForceReference) {
+            annotationType = 'Efforts'
+
+            // Try to infer domain
+            if (predicates.is) {
+                const entities = predicates.is.filter(e => e.includes(':')).join(', ')
+                if (entities.includes('CHEBI')) {
+                    domain = 'Biochemistry'
+                } else if (entities.includes('FMA')) {
+                    domain = 'Fluid dynamics'
+                }
+            }
+
+            if (predicates.hasSource) {
+                details.push({ label: 'Source', value: 'Defined' })
+            }
+            if (predicates.hasTarget) {
+                details.push({ label: 'Target', value: 'Defined' })
+            }
+        }
+
+        // Add compartment info
+        if (predicates.isPartOf) {
+            const compartments = predicates.isPartOf.filter(c => c.includes(':')).join(', ')
+            if (compartments) {
+                details.push({ label: 'Compartment', value: compartments })
+            }
+        }
+
+        // Add physical property
+        if (predicates.isPropertyOf) {
+            const properties = predicates.isPropertyOf.filter(p => p.includes(':')).join(', ')
+            if (properties) {
+                details.push({ label: 'Physical Property', value: properties })
+            }
+        }
+
+        // Create annotation summary
+        if (!annotations.value[varKey]) {
+            annotations.value[varKey] = []
+        }
+
+        // Remove any existing imported annotations for this variable
+        annotations.value[varKey] = annotations.value[varKey].filter(a => a.type !== 'Imported' && a.type !== annotationType)
+
+        // Add new annotation
+        annotations.value[varKey].push({
+            type: annotationType,
+            domain: domain,
+            details: details.length > 0 ? details : [
+                { label: 'Status', value: 'Imported from RDF' },
+                { label: 'Triples', value: `${triples.length} triples found` }
+            ]
+        })
+
+        console.log(`Added annotation for ${varKey}:`, annotations.value[varKey])
     }
 
     const clearAllAnnotations = () => {

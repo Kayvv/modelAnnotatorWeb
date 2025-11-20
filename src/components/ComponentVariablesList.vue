@@ -138,6 +138,10 @@ watch(() => props.groupedVariables, () => {
   initializeExpandedState()
 }, { immediate: true })
 
+watch(() => props.annotations, () => {
+  console.log('Annotations updated in ComponentVariablesList')
+}, { deep: true })
+
 const toggleComponent = (componentName) => {
   expandedComponents.value[componentName] = !expandedComponents.value[componentName]
 }
@@ -154,7 +158,8 @@ const getVariableKey = (variable) => {
 const isVariableAnnotated = (variable) => {
   if (!props.annotations) return false
   const key = getVariableKey(variable)
-  return props.annotations[key] && props.annotations[key].length > 0
+  const varAnnotations = props.annotations[key]
+  return varAnnotations && varAnnotations.length > 0
 }
 
 const getAnnotatedCount = (componentName) => {

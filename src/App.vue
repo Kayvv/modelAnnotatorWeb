@@ -225,9 +225,18 @@ const handleRDFLoaded = async (content) => {
       return
     }
     
-    const tripleCount = await importRDF(content)
+    const tripleCount = await importRDF(content, model.value)
+
+    if (selectedVariable.value) {
+      const currentVar = selectedVariable.value
+      selectVariable(null)
+      setTimeout(() => {
+        selectVariable(currentVar)
+      }, 100)
+    }
     
-    showMessage(`✅ Successfully imported ${tripleCount} RDF triples`, 'success')
+    const annotatedVarCount = Object.keys(annotations.value).length
+    showMessage(`✅ Successfully imported ${tripleCount} RDF triples for ${annotatedVarCount} variables`, 'success')
   } catch (error) {
     console.error('RDF load error:', error)
     showMessage(`❌ Error loading RDF: ${error.message}`, 'error')
