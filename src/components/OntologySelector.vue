@@ -153,15 +153,15 @@
         </div>
 
         <div class="modal-actions">
+          <button @click="selectRecommended" class="btn btn-secondary">
+            Use Recommended Selection
+          </button>
           <button 
             @click="proceedToTermSelection" 
             class="btn btn-primary"
             :disabled="selectedOntologies.length === 0"
           >
             Next: Select Terms ({{ selectedOntologies.length }} ontolog{{ selectedOntologies.length === 1 ? 'y' : 'ies' }})
-          </button>
-          <button @click="selectRecommended" class="btn btn-secondary">
-            Use Recommended Selection
           </button>
         </div>
       </div>

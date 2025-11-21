@@ -122,13 +122,13 @@ const expandedCategories = ref({})
 const initializeExpandedState = () => {
   Object.keys(props.groupedVariables || {}).forEach(componentName => {
     if (!(componentName in expandedComponents.value)) {
-      expandedComponents.value[componentName] = true
+      expandedComponents.value[componentName] = false
     }
     
     Object.keys(props.groupedVariables[componentName].categories).forEach(categoryName => {
       const key = `${componentName}-${categoryName}`
       if (!(key in expandedCategories.value)) {
-        expandedCategories.value[key] = true
+        expandedCategories.value[key] = false
       }
     })
   })

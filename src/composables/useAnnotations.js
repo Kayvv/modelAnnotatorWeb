@@ -374,7 +374,7 @@ export function useAnnotations() {
                 details.push({ label: 'Source', value: 'Defined' })
             }
             if (predicates.hasTarget) {
-                details.push({ label: 'Target', value: 'Defined' })
+                details.push({ label: 'Sink', value: 'Defined' })
             }
         }
 

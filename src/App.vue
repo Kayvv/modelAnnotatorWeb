@@ -81,11 +81,8 @@
           />
           
           <div class="export-buttons">
-            <button @click="handleExportRDF" class="btn btn-primary">
+            <button @click="handleExportRDF" class="btn btn-success">
               Export RDF (Turtle)
-            </button>
-            <button @click="handleExportCombined" class="btn btn-success">
-              Export CellML + RDF
             </button>
             <button @click="handleClearAnnotations" class="btn btn-danger">
               Clear All Annotations
@@ -120,7 +117,6 @@ const {
   components,
   groupedVariables, 
   parseModel, 
-  exportModel, 
   initLibCellML,
   importIssues,
   hasUnresolvedImports,
@@ -211,8 +207,6 @@ const handleFileLoaded = async (content) => {
   try {
     await parseModel(content)
     
-    showOntologySelector.value = true
-    
   } catch (error) {
     showMessage(`❌ Error loading model: ${error.message}`, 'error')
   }
@@ -262,15 +256,7 @@ const handleVariableSelected = (variable) => {
 }
 
 const handleAnnotationAdded = (annotation) => {
-  console.log('=== APP.VUE RECEIVED ANNOTATION ===')
-  console.log('Annotation:', annotation)
-  console.log('Current variable:', selectedVariable.value?.name)
-  
   addAnnotation(annotation)
-  
-  console.log('After adding, current annotations:', currentAnnotations.value)
-  console.log('RDF triple count:', rdfTripleCount.value)
-  
   showMessage('Annotation added successfully', 'success')
 }
 
@@ -292,19 +278,6 @@ const handleExportRDF = async () => {
   } catch (error) {
     console.error('Error exporting RDF:', error)
     showMessage('Error exporting RDF', 'error')
-  }
-}
-
-const handleExportCombined = async () => {
-  try {
-    exportModel()
-    
-    await handleExportRDF()
-    
-    showMessage('CellML and RDF exported successfully', 'success')
-  } catch (error) {
-    console.error('Error exporting:', error)
-    showMessage('Error exporting files', 'error')
   }
 }
 

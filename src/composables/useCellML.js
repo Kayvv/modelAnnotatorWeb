@@ -61,11 +61,19 @@ export function useCellML() {
 
                                 unitConfig.definition.forEach(unitDef => {
                                     const [baseUnit, prefix = null, exponent = 1] = unitDef
+                                    // addUnitByReference:ƒ(arg0)
+                                    // addUnitByReferenceEnumPrefix:ƒ(arg0, arg1, arg2, arg3, arg4)
+                                    // addUnitByReferenceExponent:ƒ(arg0, arg1, arg2)
+                                    // addUnitByReferenceIntPrefix:ƒ(arg0, arg1, arg2, arg3, arg4)
+                                    // addUnitByReferenceStringPrefix:ƒ(arg0, arg1, arg2, arg3, arg4)
+                                    // addUnitByStandardUnit:ƒ(arg0)
+                                    // addUnitByStandardUnitEnumPrefix:ƒ(arg0, arg1, arg2, arg3, arg4)
+                                    // addUnitByStandardUnitExponent:ƒ(arg0, arg1, arg2)
+                                    // addUnitByStandardUnitIntPrefix:ƒ(arg0, arg1, arg2, arg3, arg4)
+                                    // addUnitByStandardUnitStringPrefix:ƒ(arg0, arg1, arg2, arg3, arg4)
 
-                                    if (prefix && exponent !== 1) {
-                                        referenceUnits.addUnitByReferenceStringPrefix(baseUnit, prefix, exponent)
-                                    } else if (prefix) {
-                                        referenceUnits.addUnitByReferenceStringPrefix(baseUnit, prefix)
+                                    if (prefix) {
+                                        referenceUnits.addUnitByReferenceStringPrefix(baseUnit, prefix, exponent, 1, "1")
                                     } else if (exponent !== 1) {
                                         referenceUnits.addUnitByReferenceExponent(baseUnit, exponent, "1")
                                     } else {
@@ -435,34 +443,12 @@ export function useCellML() {
         }
     }
 
-    const exportModel = () => {
-        try {
-            if (!model.value || !printer.value) {
-                throw new Error('Model or printer not initialized')
-            }
-
-            const modelString = printer.value.printModel(model.value)
-            const blob = new Blob([modelString], { type: 'application/xml' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${modelName.value || 'model'}_annotated.cellml`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
-        } catch (error) {
-            console.error('Export failed:', error)
-        }
-    }
-
     return {
         model,
         components,
         variables,
         groupedVariables,
         parseModel,
-        exportModel,
         initLibCellML,
         importIssues,
         hasUnresolvedImports,
