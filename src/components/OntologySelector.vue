@@ -38,7 +38,7 @@
 
         <div class="ontology-sections">
           <!-- Biochemistry Ontologies -->
-          <div v-if="modelStats && modelStats.biochemistryCount > 0" class="ontology-section">
+          <div class="ontology-section">
             <h3>
               <input 
                 type="checkbox" 
@@ -76,7 +76,7 @@
           </div>
 
           <!-- Fluid Dynamics Ontologies -->
-          <div v-if="modelStats && modelStats.fluidDynamicsCount > 0" class="ontology-section">
+          <div class="ontology-section">
             <h3>
               <input 
                 type="checkbox" 
@@ -89,44 +89,6 @@
             <div class="ontology-list">
               <div 
                 v-for="ontology in fluidDynamicsOntologies" 
-                :key="ontology.id"
-                class="ontology-item"
-                :class="{ selected: selectedOntologies.includes(ontology.id) }"
-              >
-                <input 
-                  type="checkbox" 
-                  :id="ontology.id"
-                  :value="ontology.id"
-                  v-model="selectedOntologies"
-                />
-                <label :for="ontology.id">
-                  <div class="ontology-info">
-                    <strong>{{ ontology.name }}</strong>
-                    <span class="ontology-abbr">({{ ontology.id }})</span>
-                  </div>
-                  <p class="ontology-description">{{ ontology.description }}</p>
-                  <div class="ontology-usage">
-                    <span class="usage-tag">{{ ontology.usage }}</span>
-                  </div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Common Ontologies -->
-          <div class="ontology-section">
-            <h3>
-              <input 
-                type="checkbox" 
-                id="select-all-common"
-                :checked="allCommonSelected"
-                @change="toggleAllCommon"
-              />
-              <label for="select-all-common">Common Ontologies (Required)</label>
-            </h3>
-            <div class="ontology-list">
-              <div 
-                v-for="ontology in commonOntologies" 
                 :key="ontology.id"
                 class="ontology-item"
                 :class="{ selected: selectedOntologies.includes(ontology.id) }"
@@ -249,13 +211,24 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ontologyCommonTerms } from '../config/ontologyCommonTerms'
 
 const props = defineProps({
-  modelStats: Object
+  modelStats: Object,
+  previousSelection: Object 
 })
 
+onMounted(() => {
+  if (props.previousSelection) {
+    selectedOntologies.value = [...props.previousSelection.selectedOntologies]
+    selectedTerms.value = [...props.previousSelection.selectedTerms]
+    console.log('Restored previous selection:', {
+      ontologies: selectedOntologies.value,
+      terms: selectedTerms.value.length
+    })
+  }
+})
 const emit = defineEmits(['ontologies-selected'])
 
 const currentStep = ref(1)
@@ -367,10 +340,6 @@ const allFluidSelected = computed(() => {
   return fluidDynamicsOntologies.every(ont => selectedOntologies.value.includes(ont.id))
 })
 
-const allCommonSelected = computed(() => {
-  return commonOntologies.every(ont => selectedOntologies.value.includes(ont.id))
-})
-
 const toggleAllBiochem = (event) => {
   const ids = biochemistryOntologies.map(ont => ont.id)
   if (event.target.checked) {
@@ -397,22 +366,7 @@ const toggleAllFluid = (event) => {
   }
 }
 
-const toggleAllCommon = (event) => {
-  const ids = commonOntologies.map(ont => ont.id)
-  if (event.target.checked) {
-    ids.forEach(id => {
-      if (!selectedOntologies.value.includes(id)) {
-        selectedOntologies.value.push(id)
-      }
-    })
-  } else {
-    selectedOntologies.value = selectedOntologies.value.filter(id => !ids.includes(id))
-  }
-}
-
 const selectRecommended = () => {
-  selectedOntologies.value = ['OPB']
-  
   if (props.modelStats.biochemistryCount > 0) {
     selectedOntologies.value.push('CHEBI', 'GO', 'GO_BP', 'PR', 'UNIPROT')
   }
@@ -497,7 +451,6 @@ const confirmSelection = () => {
     }
   })
   
-  console.log('Final ontology config:', ontologyConfig)
   emit('ontologies-selected', ontologyConfig)
 }
 

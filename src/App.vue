@@ -9,6 +9,7 @@
     <OntologySelector
       v-if="showOntologySelector"
       :model-stats="modelStats"
+      :previous-selection="savedOntologySelection"
       @ontologies-selected="handleOntologiesSelected"
       @close="handleOntologySelectorClose"
     />
@@ -147,6 +148,7 @@ const getTotalVariables = () => {
 const message = ref({ text: '', type: '' })
 const showOntologySelector = ref(false)
 const userOntologies = ref(null)
+const savedOntologySelection = ref(null)
 
 const rdfTripleCount = computed(() => {
   return getAnnotationCount()
@@ -239,6 +241,12 @@ const handleRDFLoaded = async (content) => {
 
 const handleOntologiesSelected = (ontologies) => {
   userOntologies.value = ontologies
+  savedOntologySelection.value = {
+    selectedOntologies: Object.keys(ontologies),
+    selectedTerms: Object.values(ontologies).flatMap(ont => 
+      ont.commonTerms ? ont.commonTerms.map(t => t.id) : []
+    )
+  }
   showOntologySelector.value = false
   console.log('User selected ontologies:', ontologies)
   showMessage(`${Object.keys(ontologies).length} ontologies selected`, 'success')
