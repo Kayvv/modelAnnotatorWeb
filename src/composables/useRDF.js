@@ -688,7 +688,23 @@ export function useRDF() {
 
         return potentialNode
     }
+    const createOPBOnlyAnnotation = (variableInfo, annotationData) => {
+        const { modelName, component, variable } = variableInfo
+        const { physicalProperty } = annotationData
 
+        const variableURI = createVariableURI(modelName, component.name, variable.name)
+
+        if (physicalProperty) {
+            const opbURI = createURI('opb', physicalProperty)
+            createSingularAnnotation(
+                variableURI,
+                namespaces.bqbiol + 'isPropertyOf',
+                opbURI
+            )
+        }
+
+        return variableURI
+    }
     const addAnnotation = (annotation) => {
         const { type, domain, data, variable } = annotation
 
@@ -696,6 +712,11 @@ export function useRDF() {
             modelName: variable.component.name,
             component: variable.component,
             variable: variable
+        }
+
+        // Handle OPB-only annotations
+        if (type === 'OPB-only') {
+            return createOPBOnlyAnnotation(variableInfo, data)
         }
 
         if (domain === 'Biochemistry') {

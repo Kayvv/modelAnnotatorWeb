@@ -92,6 +92,14 @@ export function useAnnotations() {
             details: []
         }
 
+        // Handle OPB-only annotations
+        if (type === 'OPB-only') {
+            summary.details = [
+                { label: 'Physical Property', value: data.physicalProperty || 'N/A' }
+            ]
+            return summary
+        }
+
         if (domain === 'Biochemistry') {
             if (type === 'Quantities') {
                 summary.details = [

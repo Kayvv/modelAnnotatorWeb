@@ -87,7 +87,8 @@ export function useCellML() {
                                         category: categoryName,
                                         matchedUnit: unitConfig.name,
                                         domain: unitConfig.domain || 'Unknown',
-                                        annotationType: unitConfig.annotationType || null
+                                        annotationType: unitConfig.annotationType || null,
+                                        possibleOPBTerms: unitConfig.possibleOPBTerms || []
                                     }
 
                                     if (!byComponent[componentName].categories[categoryName]) {
