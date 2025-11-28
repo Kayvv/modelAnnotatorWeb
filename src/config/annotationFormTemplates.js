@@ -35,7 +35,7 @@ export const biochemistryTemplates = {
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00425 (chemical concentration)",
                 helpText: "Search OPB for physical properties",
-                searchUrl: "https://bioportal.bioontology.org/ontologies/OPB?p=classes&conceptid=",
+                searchUrl: "http://identifiers.org/opb/",
                 validatePattern: /^OPB:\d+$/,
             }
         ]
@@ -154,6 +154,7 @@ export const biochemistryTemplates = {
                 required: true,
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00592 (chemical flux)",
+                searchUrl: "http://identifiers.org/opb/",
                 validatePattern: /^OPB:\d+$/,
             }
         ]
@@ -220,6 +221,7 @@ export const biochemistryTemplates = {
                 required: true,
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00506 (electrical potential difference)",
+                searchUrl: "http://identifiers.org/opb/",
                 validatePattern: /^OPB:\d+$/
             }
         ]
@@ -262,6 +264,7 @@ export const fluidDynamicsTemplates = {
                 required: true,
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00154 (volume)",
+                searchUrl: "http://identifiers.org/opb/",
                 validatePattern: /^OPB:\d+$/,
             }
         ]
@@ -366,6 +369,7 @@ export const fluidDynamicsTemplates = {
                 required: true,
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00593 (fluid flow rate)",
+                searchUrl: "http://identifiers.org/opb/",
                 validatePattern: /^OPB:\d+$/,
             }
         ]
@@ -416,6 +420,7 @@ export const fluidDynamicsTemplates = {
                 required: true,
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00509 (pressure)",
+                searchUrl: "http://identifiers.org/opb/",
                 validatePattern: /^OPB:\d+$/,
             }
         ]

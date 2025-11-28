@@ -87,7 +87,7 @@ const selectTerm = (term) => {
 }
 
 const getSearchUrl = () => {
-  return props.field.searchUrl + props.modelValue
+  return props.field.searchUrl + props.modelValue.replace(':', '_')
 }
 </script>
 
