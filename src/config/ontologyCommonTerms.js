@@ -1,22 +1,4 @@
 export const ontologyCommonTerms = {
-    // Physical property ontology
-    OPB: {
-        name: 'Ontology of Physics for Biology',
-        terms: [
-            { id: 'OPB:00425', label: 'chemical concentration' },
-            { id: 'OPB:00340', label: 'amount of substance' },
-            { id: 'OPB:00523', label: 'charge density' },
-            { id: 'OPB:00592', label: 'chemical flux' },
-            { id: 'OPB:00593', label: 'fluid flow rate' },
-            { id: 'OPB:01358', label: 'volumetric flow rate' },
-            { id: 'OPB:00506', label: 'electrical potential difference' },
-            { id: 'OPB:00378', label: 'chemical potential' },
-            { id: 'OPB:00509', label: 'pressure' },
-            { id: 'OPB:01492', label: 'pressure difference' },
-            { id: 'OPB:00154', label: 'volume' }
-        ]
-    },
-
     // Biochemistry
     // Compartment/anatomical ontologies
     GO: {

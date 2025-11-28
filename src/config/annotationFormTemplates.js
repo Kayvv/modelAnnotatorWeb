@@ -263,10 +263,6 @@ export const fluidDynamicsTemplates = {
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00154 (volume)",
                 validatePattern: /^OPB:\d+$/,
-                commonTerms: [
-                    { id: "OPB:00154", label: "volume" },
-                    { id: "OPB:00340", label: "amount of substance" }
-                ]
             }
         ]
     },
@@ -371,10 +367,6 @@ export const fluidDynamicsTemplates = {
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00593 (fluid flow rate)",
                 validatePattern: /^OPB:\d+$/,
-                commonTerms: [
-                    { id: "OPB:00593", label: "fluid flow rate" },
-                    { id: "OPB:01358", label: "volumetric flow rate" }
-                ]
             }
         ]
     },
@@ -425,10 +417,6 @@ export const fluidDynamicsTemplates = {
                 ontology: "OPB",
                 placeholder: "e.g., OPB:00509 (pressure)",
                 validatePattern: /^OPB:\d+$/,
-                commonTerms: [
-                    { id: "OPB:00509", label: "pressure" },
-                    { id: "OPB:01492", label: "pressure difference" }
-                ]
             }
         ]
     }

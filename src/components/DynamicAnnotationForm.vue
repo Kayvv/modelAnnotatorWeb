@@ -1,13 +1,6 @@
 <template>
   <div class="dynamic-annotation-form">
-    <div v-if="!selectedVariable.possibleOPBTerms || selectedVariable.possibleOPBTerms.length === 0" class="no-opb-message">
-      <div class="info-message">
-        <h4>⚠️ No OPB Terms Available</h4>
-        <p>No physical property terms found for units "{{ selectedVariable.units }}".</p>
-      </div>
-    </div>
-
-    <div v-else-if="!hasAnnotationType" class="opb-only-annotation">
+    <div v-if="!hasAnnotationType" class="opb-only-annotation">
       <div class="form-header">
         <h3>Physical Property Annotation</h3>
         <p>This variable only requires an OPB (Ontology of Physics for Biology) term.</p>
@@ -26,7 +19,7 @@
           </label>
           <p class="help-text">The physical property that this variable represents</p>
           
-          <div v-if="selectedVariable.possibleOPBTerms.length === 1" class="single-opb-container">
+          <div v-if="selectedVariable.possibleOPBTerms && selectedVariable.possibleOPBTerms.length === 1" class="single-opb-container">
             <input
               id="opb-term"
               v-model="opbTerm"
@@ -36,7 +29,6 @@
             />
             <span class="auto-filled-badge">✓ Auto-filled</span>
           </div>
-
           <div v-else class="multiple-opb-container">
             <input
               id="opb-term"
@@ -45,7 +37,7 @@
               class="opb-input"
               placeholder="e.g., OPB:00425"
             />
-            <div class="opb-suggestions">
+            <div v-if="selectedVariable.possibleOPBTerms && selectedVariable.possibleOPBTerms.length > 1 && !opbTerm" class="opb-suggestions">
               <p class="suggestions-label">⚠️ Multiple options available - please select one:</p>
               <div class="opb-buttons">
                 <button
@@ -57,7 +49,6 @@
                   :class="{ selected: opbTerm === term }"
                 >
                   <span class="term-id">{{ term }}</span>
-                  <span class="term-label">{{ getOPBTermLabel(term) }}</span>
                 </button>
               </div>
             </div>
@@ -133,7 +124,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { getTemplateForVariable } from '../config/annotationFormTemplates'
-import { ontologyCommonTerms } from '../config/ontologyCommonTerms'
 import FormField from './FormField.vue'
 
 const props = defineProps({
@@ -167,12 +157,6 @@ const formTemplate = computed(() => {
   // Pass userOntologies to inject common terms
   return getTemplateForVariable(domain, annotationType, props.userOntologies)
 })
-
-const getOPBTermLabel = (termId) => {
-  const opbTerms = ontologyCommonTerms.OPB?.terms || []
-  const term = opbTerms.find(t => t.id === termId)
-  return term ? term.label : ''
-}
 
 const selectOPBTerm = (term) => {
   opbTerm.value = term
