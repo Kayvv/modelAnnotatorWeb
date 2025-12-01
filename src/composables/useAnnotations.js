@@ -124,8 +124,8 @@ export function useAnnotations() {
                 summary.details = [
                     { label: 'Source Species', value: data.source?.species || 'N/A' },
                     { label: 'Source Compartment', value: data.source?.compartment || 'N/A' },
-                    { label: 'Sink Species', value: data.target?.species || 'N/A' },
-                    { label: 'Sink Compartment', value: data.target?.compartment || 'N/A' },
+                    { label: 'Sink Species', value: data.sink?.species || 'N/A' },
+                    { label: 'Sink Compartment', value: data.sink?.compartment || 'N/A' },
                     { label: 'Physical Property', value: data.physicalProperty || 'N/A' }
                 ]
             }
@@ -151,7 +151,7 @@ export function useAnnotations() {
             } else if (type === 'Efforts') {
                 summary.details = [
                     { label: 'Source Location', value: data.source?.location || 'N/A' },
-                    { label: 'Sink Location', value: data.target?.location || 'N/A' },
+                    { label: 'Sink Location', value: data.sink?.location || 'N/A' },
                     { label: 'Physical Property', value: data.physicalProperty || 'N/A' }
                 ]
             }
@@ -381,7 +381,7 @@ export function useAnnotations() {
             if (predicates.hasSource) {
                 details.push({ label: 'Source', value: 'Defined' })
             }
-            if (predicates.hasTarget) {
+            if (predicates.hasSink) {
                 details.push({ label: 'Sink', value: 'Defined' })
             }
         }

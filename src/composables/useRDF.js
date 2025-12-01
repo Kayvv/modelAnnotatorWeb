@@ -322,7 +322,7 @@ export function useRDF() {
 
     const createBiochemistryEffortAnnotation = (variableInfo, annotationData) => {
         const { modelName, component, variable } = variableInfo
-        const { source, target, physicalProperty } = annotationData
+        const { source, sink, physicalProperty } = annotationData
 
         const variableURI = createVariableURI(modelName, component.name, variable.name)
         const potentialNode = `${variableURI}_potential`
@@ -366,27 +366,27 @@ export function useRDF() {
             }
         }
 
-        if (target) {
-            const targetNode = `${potentialNode}_target`
+        if (sink) {
+            const sinkNode = `${potentialNode}_sink`
             createSingularAnnotation(
                 potentialNode,
-                namespaces.semsim + 'hasTarget',
-                targetNode
+                namespaces.semsim + 'hasSink',
+                sinkNode
             )
 
-            if (target.species) {
-                const speciesURI = createURI('chebi', target.species)
+            if (sink.species) {
+                const speciesURI = createURI('chebi', sink.species)
                 createSingularAnnotation(
-                    targetNode,
+                    sinkNode,
                     namespaces.bqbiol + 'is',
                     speciesURI
                 )
             }
 
-            if (target.compartment) {
-                const compartmentURI = createURI('go', target.compartment)
+            if (sink.compartment) {
+                const compartmentURI = createURI('go', sink.compartment)
                 createSingularAnnotation(
-                    targetNode,
+                    sinkNode,
                     namespaces.bqbiol + 'isPartOf',
                     compartmentURI
                 )
@@ -618,7 +618,7 @@ export function useRDF() {
 
     const createFluidDynamicsEffortAnnotation = (variableInfo, annotationData) => {
         const { modelName, component, variable } = variableInfo
-        const { source, target, physicalProperty } = annotationData
+        const { source, sink, physicalProperty } = annotationData
 
         const variableURI = createVariableURI(modelName, component.name, variable.name)
         const potentialNode = `${variableURI}_potential`
@@ -656,22 +656,22 @@ export function useRDF() {
             )
         }
 
-        if (target && target.location) {
-            const targetNode = `${potentialNode}_target`
+        if (sink && sink.location) {
+            const sinkNode = `${potentialNode}_sink`
             createSingularAnnotation(
                 potentialNode,
-                namespaces.semsim + 'hasTarget',
-                targetNode
+                namespaces.semsim + 'hasSink',
+                sinkNode
             )
 
             let locationURI
-            if (target.location.startsWith('UBERON:')) {
-                locationURI = createURI('uberon', target.location)
+            if (sink.location.startsWith('UBERON:')) {
+                locationURI = createURI('uberon', sink.location)
             } else {
-                locationURI = createURI('fma', target.location)
+                locationURI = createURI('fma', sink.location)
             }
             createSingularAnnotation(
-                targetNode,
+                sinkNode,
                 namespaces.bqbiol + 'is',
                 locationURI
             )

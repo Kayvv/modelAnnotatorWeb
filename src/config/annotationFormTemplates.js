@@ -191,7 +191,7 @@ export const biochemistryTemplates = {
                 ]
             },
             {
-                id: "target",
+                id: "sink",
                 label: "Sink",
                 type: "composite",
                 required: true,
@@ -398,7 +398,7 @@ export const fluidDynamicsTemplates = {
                 ]
             },
             {
-                id: "target",
+                id: "sink",
                 label: "Sink Location",
                 type: "composite",
                 required: true,
