@@ -173,15 +173,15 @@ export function useAnnotations() {
 
     const importRDF = async (turtleString, model) => {
         try {
-            const tripleCount = await rdf.importFromTurtle(turtleString)
+            const addedCount = await rdf.importFromTurtle(turtleString)
 
-            console.log('Imported triples:', tripleCount)
+            console.log('Added triples:', addedCount)
             console.log('Current store size:', rdf.store.value.length)
 
-            // Parse with model context to match variables
+            // Parse with model context to match variables (only valid variables in current model)
             await parseImportedAnnotationsWithModel(turtleString, model)
 
-            return tripleCount
+            return addedCount
         } catch (error) {
             console.error('Error importing RDF:', error)
             throw error
@@ -264,9 +264,18 @@ export function useAnnotations() {
                 } else {
                     // Parsing complete
                     console.log('Matched variables from RDF:', Array.from(triplesByVariable.keys()))
+                    console.log('Model variables:', Array.from(modelVariables.keys()))
 
-                    // Process matched triples
-                    triplesByVariable.forEach((triples, varKey) => {
+                    // Only process variables that exist in the model
+                    const validVariables = Array.from(triplesByVariable.keys()).filter(varKey =>
+                        modelVariables.has(varKey)
+                    )
+
+                    console.log('Valid variables to process:', validVariables)
+
+                    // Process matched triples only for valid variables
+                    validVariables.forEach(varKey => {
+                        const triples = triplesByVariable.get(varKey)
                         processVariableTriples(varKey, triples)
                     })
 
@@ -328,13 +337,13 @@ export function useAnnotations() {
             annotationType = 'Quantities'
 
             if (predicates.is) {
-                const entities = predicates.is.filter(e => e.includes(':')).join(', ')
-                if (entities.includes('CHEBI')) {
+                const entities = predicates.is.filter(e => e.includes(':'))
+                if (entities.some(e => e.includes('CHEBI'))) {
                     domain = 'Biochemistry'
-                    details.push({ label: 'Species', value: entities })
-                } else if (entities.includes('FMA') || entities.includes('fma')) {
+                    details.push({ label: 'Species', value: entities[0] })
+                } else if (entities.some(e => e.includes('FMA') || e.includes('fma'))) {
                     domain = 'Fluid dynamics'
-                    details.push({ label: 'Fluid', value: entities })
+                    details.push({ label: 'Fluid', value: entities[0] })
                 }
             }
         }
@@ -353,14 +362,19 @@ export function useAnnotations() {
                 }
             }
 
-            if (predicates.hasSourceParticipant) {
-                details.push({ label: 'Source', value: 'Defined' })
+            // Extract source/sink/mediator details
+            const sourceSpecies = predicates.is?.find(v => predicates.hasSourceParticipant)
+            const sinkSpecies = predicates.is?.find(v => predicates.hasSinkParticipant)
+            const mediatorProtein = predicates.is?.find(v => predicates.hasMediatorParticipant)
+
+            if (sourceSpecies || predicates.hasSourceParticipant) {
+                details.push({ label: 'Source Species', value: sourceSpecies || 'Defined' })
             }
-            if (predicates.hasSinkParticipant) {
-                details.push({ label: 'Sink', value: 'Defined' })
+            if (sinkSpecies || predicates.hasSinkParticipant) {
+                details.push({ label: 'Sink Species', value: sinkSpecies || 'Defined' })
             }
-            if (predicates.hasMediatorParticipant) {
-                details.push({ label: 'Mediator', value: 'Defined' })
+            if (mediatorProtein || predicates.hasMediatorParticipant) {
+                details.push({ label: 'Mediator', value: mediatorProtein || 'Defined' })
             }
         }
 
@@ -379,10 +393,12 @@ export function useAnnotations() {
             }
 
             if (predicates.hasSource) {
-                details.push({ label: 'Source', value: 'Defined' })
+                const sourceEntity = predicates.is?.[0]
+                details.push({ label: 'Source', value: sourceEntity || 'Defined' })
             }
-            if (predicates.hasSink) {
-                details.push({ label: 'Sink', value: 'Defined' })
+            if (predicates.hasTarget) {
+                const targetEntity = predicates.is?.[1] || predicates.is?.[0]
+                details.push({ label: 'Sink', value: targetEntity || 'Defined' })
             }
         }
 
@@ -396,9 +412,11 @@ export function useAnnotations() {
 
         // Add physical property
         if (predicates.isPropertyOf) {
-            const properties = predicates.isPropertyOf.filter(p => p.includes(':')).join(', ')
-            if (properties) {
-                details.push({ label: 'Physical Property', value: properties })
+            const properties = predicates.isPropertyOf.filter(p => p.includes(':'))
+            if (properties.length > 0) {
+                // Remove duplicates and take first one
+                const uniqueProps = [...new Set(properties)]
+                details.push({ label: 'Physical Property', value: uniqueProps[0] })
             }
         }
 

@@ -797,11 +797,43 @@ export function useRDF() {
                             }
                         }
                     } else {
-                        // Parsing complete - add all quads to store
-                        console.log('Adding quads to store:', quads.length)
-                        store.value = [...store.value, ...quads]
+                        // Parsing complete - remove duplicates within imported file first
+                        console.log('Importing quads:', quads.length)
+
+                        // Create a function to check if two quads are equal
+                        const quadsEqual = (q1, q2) => {
+                            return q1.subject.value === q2.subject.value &&
+                                q1.predicate.value === q2.predicate.value &&
+                                q1.object.value === q2.object.value
+                        }
+
+                        // Remove duplicates within the imported file itself
+                        const uniqueQuads = []
+                        quads.forEach(quad => {
+                            const isDuplicate = uniqueQuads.some(existing => quadsEqual(existing, quad))
+                            if (!isDuplicate) {
+                                uniqueQuads.push(quad)
+                            }
+                        })
+
+                        console.log(`Removed ${quads.length - uniqueQuads.length} duplicates from RDF file`)
+
+                        // Now check against existing store
+                        let addedCount = 0
+                        uniqueQuads.forEach(newQuad => {
+                            const isDuplicate = store.value.some(existingQuad =>
+                                quadsEqual(existingQuad, newQuad)
+                            )
+
+                            if (!isDuplicate) {
+                                store.value.push(newQuad)
+                                addedCount++
+                            }
+                        })
+
+                        console.log(`Added ${addedCount} new triples (${uniqueQuads.length - addedCount} already existed)`)
                         console.log('Store now has:', store.value.length, 'triples')
-                        resolve(quads.length)
+                        resolve(addedCount)
                     }
                 })
             })
