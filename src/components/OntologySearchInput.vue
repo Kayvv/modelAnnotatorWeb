@@ -19,6 +19,14 @@
       </a>
     </div>
     
+    <div v-if="termLabel || loadingLabel" class="term-label-display">
+      <span v-if="loadingLabel" class="loading-indicator">⏳ Loading label...</span>
+      <span v-else class="term-label">
+        <span class="label-icon">✓</span>
+        <span class="label-text">{{ termLabel }}</span>
+      </span>
+    </div>
+    
     <!-- Common terms dropdown -->
     <div v-if="field.commonTerms" class="common-terms">
       <button 
@@ -50,6 +58,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { lookupBioPortalTerm } from '../utils/bioPortalAPI'
 
 const props = defineProps({
   field: Object,
@@ -60,34 +69,52 @@ const emit = defineEmits(['update:model-value'])
 
 const showCommonTerms = ref(false)
 const formatError = ref('')
+const termLabel = ref('')
+const loadingLabel = ref(false) 
 
 const handleInput = (event) => {
   formatError.value = ''
+  termLabel.value = ''
   emit('update:model-value', event.target.value)
 }
 
-const validateFormat = () => {
+const validateFormat = async () => {
   if (props.modelValue && props.field.validatePattern) {
-    // Check if validatePattern is a RegExp
     if (props.field.validatePattern instanceof RegExp) {
       if (!props.field.validatePattern.test(props.modelValue)) {
         formatError.value = `Invalid format for ${props.field.ontology} term (expected: ${props.field.validatePattern.source})`
+      } else {
+        await fetchTermLabel()
       }
-    } else {
-      console.warn('validatePattern is not a RegExp:', props.field.validatePattern)
-      formatError.value = `Invalid format for ${props.field.ontology} term`
     }
+  }
+}
+
+const fetchTermLabel = async () => {
+  if (!props.modelValue) return
+  
+  loadingLabel.value = true
+  try {
+    const result = await lookupBioPortalTerm(props.modelValue)
+    if (!result.error && result.label) {
+      termLabel.value = result.label
+    }
+  } catch (error) {
+    console.error('Error fetching term label:', error)
+  } finally {
+    loadingLabel.value = false
   }
 }
 
 const selectTerm = (term) => {
   emit('update:model-value', term.id)
   showCommonTerms.value = false
-  formatError.value = '' // Clear error when selecting from common terms
+  formatError.value = ''
+  termLabel.value = term.label
 }
 
 const getSearchUrl = () => {
-  return props.field.searchUrl + props.modelValue.replace(':', '_')
+  return props.field.searchUrl + props.modelValue
 }
 </script>
 
@@ -187,5 +214,37 @@ const getSearchUrl = () => {
   margin-top: 6px;
   font-size: 12px;
   color: #f44336;
+}
+
+.term-label-display {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #e8f5e9;
+  border-left: 3px solid #4CAF50;
+  border-radius: 4px;
+}
+
+.loading-indicator {
+  color: #666;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.term-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2e7d32;
+  font-size: 14px;
+}
+
+.label-icon {
+  color: #4CAF50;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.label-text {
+  font-weight: 500;
 }
 </style>
